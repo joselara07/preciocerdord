@@ -1756,6 +1756,60 @@
 
 </footer>
 
+    <script type="module">
+
+    import {
+        initializeApp
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+
+    import {
+        getFirestore,
+        collection,
+        addDoc,
+        serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+
+    const firebaseConfig = {
+
+        apiKey: "AIzaSyAjX5hRPpO2IEky-GAEmFH9VcQDS9QSgSU",
+
+        authDomain: "precio-cerdo-rd.firebaseapp.com",
+
+        projectId: "precio-cerdo-rd",
+
+        storageBucket: "precio-cerdo-rd.firebasestorage.app",
+
+        messagingSenderId: "773220028172",
+
+        appId: "1:773220028172:web:661b4043f266d919a78329"
+
+    };
+
+
+    const app =
+        initializeApp(firebaseConfig);
+
+
+    const db =
+        getFirestore(app);
+
+
+    window.firebaseDB = db;
+
+    window.firebaseCollection = collection;
+
+    window.firebaseAddDoc = addDoc;
+
+    window.firebaseServerTimestamp =
+        serverTimestamp;
+
+
+    console.log(
+        "🔥 Firebase conectado correctamente"
+    );
+
+</script>
 
 
 <script>

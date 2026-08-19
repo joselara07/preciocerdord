@@ -1763,11 +1763,14 @@
     } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 
     import {
-        getFirestore,
-        collection,
-        addDoc,
-        serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    query,
+    where,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 
     const firebaseConfig = {
@@ -1803,6 +1806,12 @@
 
     window.firebaseServerTimestamp =
         serverTimestamp;
+
+    window.firebaseGetDocs = getDocs;
+
+    window.firebaseQuery = query;
+
+    window.firebaseWhere = where;
 
 
     console.log(
@@ -2006,13 +2015,12 @@ function updateMunicipalities() {
    ACTUALIZAR PRECIO PRINCIPAL
 ===================================== */
 
-function updateMainPrice() {
+async function updateMainPrice() {
 
     const province =
         document
         .getElementById("locationProvince")
         .value;
-
 
     const municipality =
         document
@@ -2024,21 +2032,17 @@ function updateMainPrice() {
         document
         .getElementById("mainPlace");
 
-
     const mainProvince =
         document
         .getElementById("mainProvince");
-
 
     const mainPrice =
         document
         .getElementById("mainPrice");
 
-
     const mainMeta =
         document
         .getElementById("mainMeta");
-
 
     const message =
         document
@@ -2054,53 +2058,189 @@ function updateMainPrice() {
     }
 
 
-    const key =
-        province + "|" + municipality;
-
-
-    const data =
-        zonePrices[key];
-
-
     mainPlace.textContent =
         municipality;
-
 
     mainProvince.textContent =
         province;
 
+    mainPrice.textContent =
+        "...";
 
-    if (data) {
+    mainMeta.textContent =
+        "Consultando precios...";
+
+    message.textContent =
+        "🔎 Buscando reportes recientes de esta zona.";
+
+
+    try {
+
+        const reportsRef =
+            window.firebaseCollection(
+                window.firebaseDB,
+                "reports"
+            );
+
+
+        const reportsQuery =
+            window.firebaseQuery(
+                reportsRef,
+                window.firebaseWhere(
+                    "provincia",
+                    "==",
+                    province
+                ),
+                window.firebaseWhere(
+                    "zona",
+                    "==",
+                    municipality
+                )
+            );
+
+
+        const snapshot =
+            await window.firebaseGetDocs(
+                reportsQuery
+            );
+
+
+        if (snapshot.empty) {
+
+            mainPrice.textContent =
+                "Sin datos";
+
+            mainMeta.textContent =
+                "Todavía no hay reportes para esta zona.";
+
+            message.textContent =
+                "ℹ️ Esta zona todavía no tiene un precio de referencia.";
+
+            return;
+
+        }
+
+
+        const prices = [];
+
+
+        snapshot.forEach(function(doc) {
+
+            const data =
+                doc.data();
+
+            if (
+                typeof data.precio === "number"
+                &&
+                data.precio > 0
+            ) {
+
+                prices.push(
+                    data.precio
+                );
+
+            }
+
+        });
+
+
+        if (prices.length === 0) {
+
+            mainPrice.textContent =
+                "Sin datos";
+
+            mainMeta.textContent =
+                "No existen precios válidos.";
+
+            return;
+
+        }
+
+
+        /*
+         * Por ahora utilizaremos la MEDIANA.
+         *
+         * Más adelante añadiremos filtros
+         * por antigüedad y valores extremos.
+         */
+
+        prices.sort(
+            (a, b) => a - b
+        );
+
+
+        const middle =
+            Math.floor(
+                prices.length / 2
+            );
+
+
+        let referencePrice;
+
+
+        if (prices.length % 2 === 0) {
+
+            referencePrice =
+                Math.round(
+                    (
+                        prices[middle - 1] +
+                        prices[middle]
+                    ) / 2
+                );
+
+        } else {
+
+            referencePrice =
+                prices[middle];
+
+        }
+
 
         mainPrice.textContent =
-            "RD$" + data.price;
+            "RD$" +
+            referencePrice;
 
 
         mainMeta.textContent =
-            data.reports +
-            " reportes · " +
-            data.updated;
+            prices.length +
+            " reporte" +
+            (
+                prices.length === 1
+                    ? ""
+                    : "s"
+            ) +
+            " registrado" +
+            (
+                prices.length === 1
+                    ? ""
+                    : "s"
+            );
 
 
         message.textContent =
-            "✅ Precio consultado para " +
+            "✅ Precio de referencia calculado para " +
             municipality +
             ", " +
             province +
             ".";
 
-    } else {
+
+    } catch (error) {
+
+        console.error(
+            "Error consultando Firestore:",
+            error
+        );
+
 
         mainPrice.textContent =
-            "Sin datos";
-
+            "Error";
 
         mainMeta.textContent =
-            "Todavía no existen suficientes reportes recientes para esta zona.";
-
+            "No pudimos consultar los precios.";
 
         message.textContent =
-            "ℹ️ Esta zona todavía no tiene un precio de referencia disponible.";
+            "❌ Ocurrió un problema al consultar los datos.";
 
     }
 

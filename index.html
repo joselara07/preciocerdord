@@ -418,7 +418,7 @@
         }
 
         /* =========================
-           PROMEDIO NACIONAL
+           REFERENCIA NACIONAL
         ========================= */
 
         .national-reference {
@@ -566,6 +566,21 @@
             outline: none;
         }
 
+        /* Fecha bloqueada */
+
+        .date-locked {
+            background: #f1f5f2 !important;
+            color: #59635b;
+            cursor: not-allowed;
+        }
+
+        .date-help {
+            display: block;
+            margin-top: 6px;
+            color: #7a847c;
+            font-size: 11px;
+        }
+
         .submit-button {
             width: 100%;
             padding: 13px;
@@ -678,10 +693,6 @@
 <body>
 
 
-<!-- =========================
-     HEADER
-========================= -->
-
 <header>
 
     <div class="header-content">
@@ -721,7 +732,7 @@
 
 
 <!-- =========================
-     INTRODUCCION
+     HERO
 ========================= -->
 
 <section class="hero">
@@ -751,7 +762,7 @@
 
 
 <!-- =========================
-     PRECIO DE TU ZONA
+     PRECIO EN TU ZONA
 ========================= -->
 
 <section class="zone-card">
@@ -775,8 +786,8 @@
 
     <p class="zone-description">
 
-        Puedes permitir que detectemos tu ubicación
-        o seleccionar manualmente la provincia y municipio.
+        Selecciona una provincia y después
+        consulta una zona específica.
 
     </p>
 
@@ -793,6 +804,10 @@
             <select
                 id="locationProvince"
                 onchange="updateMunicipalities()">
+
+                <option value="">
+                    Selecciona una provincia
+                </option>
 
                 <option value="La Vega">
                     La Vega
@@ -822,6 +837,10 @@
                     Monseñor Nouel
                 </option>
 
+                <option value="Sánchez Ramírez">
+                    Sánchez Ramírez
+                </option>
+
             </select>
 
         </div>
@@ -830,12 +849,16 @@
         <div class="field">
 
             <label>
-                Municipio
+                Zona / Municipio
             </label>
 
             <select
                 id="locationMunicipality"
                 onchange="updateLocalPrice()">
+
+                <option value="">
+                    Selecciona primero una provincia
+                </option>
 
             </select>
 
@@ -857,14 +880,14 @@
                 class="result-zone"
                 id="localPlace">
 
-                La Vega, La Vega
+                Selecciona una zona
 
             </div>
 
             <div class="result-meta"
                  id="localMeta">
 
-                18 reportes · actualizado hoy
+                El precio aparecerá aquí
 
             </div>
 
@@ -875,7 +898,7 @@
             class="result-price"
             id="localPrice">
 
-            RD$190/kg
+            —
 
         </div>
 
@@ -1059,6 +1082,10 @@
                     </th>
 
                     <th>
+                        Provincia
+                    </th>
+
+                    <th>
                         Precio/kg
                     </th>
 
@@ -1088,15 +1115,11 @@
                     data-price="190">
 
                     <td>
+                        La Vega
+                    </td>
 
-                        <div class="zone-name">
-                            La Vega
-                        </div>
-
-                        <div class="zone-province">
-                            Provincia La Vega
-                        </div>
-
+                    <td>
+                        La Vega
                     </td>
 
                     <td class="price">
@@ -1112,15 +1135,12 @@
                     </td>
 
                     <td>
-
                         <span class="status">
                             Confirmado
                         </span>
-
                     </td>
 
                 </tr>
-
 
 
                 <tr
@@ -1129,15 +1149,11 @@
                     data-price="195">
 
                     <td>
+                        Jarabacoa
+                    </td>
 
-                        <div class="zone-name">
-                            Jarabacoa
-                        </div>
-
-                        <div class="zone-province">
-                            Provincia La Vega
-                        </div>
-
+                    <td>
+                        La Vega
                     </td>
 
                     <td class="price">
@@ -1153,15 +1169,12 @@
                     </td>
 
                     <td>
-
                         <span class="status">
                             Confirmado
                         </span>
-
                     </td>
 
                 </tr>
-
 
 
                 <tr
@@ -1170,15 +1183,11 @@
                     data-price="188">
 
                     <td>
+                        Jima Abajo
+                    </td>
 
-                        <div class="zone-name">
-                            Jima Abajo
-                        </div>
-
-                        <div class="zone-province">
-                            Provincia La Vega
-                        </div>
-
+                    <td>
+                        La Vega
                     </td>
 
                     <td class="price">
@@ -1194,15 +1203,12 @@
                     </td>
 
                     <td>
-
                         <span class="status warning">
                             Pocos reportes
                         </span>
-
                     </td>
 
                 </tr>
-
 
 
                 <tr
@@ -1211,15 +1217,11 @@
                     data-price="200">
 
                     <td>
+                        Constanza
+                    </td>
 
-                        <div class="zone-name">
-                            Constanza
-                        </div>
-
-                        <div class="zone-province">
-                            Provincia La Vega
-                        </div>
-
+                    <td>
+                        La Vega
                     </td>
 
                     <td class="price">
@@ -1235,15 +1237,12 @@
                     </td>
 
                     <td>
-
                         <span class="status">
                             Confirmado
                         </span>
-
                     </td>
 
                 </tr>
-
 
 
                 <tr
@@ -1252,15 +1251,11 @@
                     data-price="185">
 
                     <td>
+                        Fantino
+                    </td>
 
-                        <div class="zone-name">
-                            Fantino
-                        </div>
-
-                        <div class="zone-province">
-                            Provincia Sánchez Ramírez
-                        </div>
-
+                    <td>
+                        Sánchez Ramírez
                     </td>
 
                     <td class="price">
@@ -1276,15 +1271,12 @@
                     </td>
 
                     <td>
-
                         <span class="status">
                             Confirmado
                         </span>
-
                     </td>
 
                 </tr>
-
 
 
                 <tr
@@ -1293,15 +1285,11 @@
                     data-price="190">
 
                     <td>
+                        Santiago
+                    </td>
 
-                        <div class="zone-name">
-                            Santiago
-                        </div>
-
-                        <div class="zone-province">
-                            Provincia Santiago
-                        </div>
-
+                    <td>
+                        Santiago
                     </td>
 
                     <td class="price">
@@ -1317,15 +1305,12 @@
                     </td>
 
                     <td>
-
                         <span class="status">
                             Confirmado
                         </span>
-
                     </td>
 
                 </tr>
-
 
 
                 <tr
@@ -1334,15 +1319,11 @@
                     data-price="185">
 
                     <td>
+                        Moca
+                    </td>
 
-                        <div class="zone-name">
-                            Moca
-                        </div>
-
-                        <div class="zone-province">
-                            Provincia Espaillat
-                        </div>
-
+                    <td>
+                        Espaillat
                     </td>
 
                     <td class="price">
@@ -1358,15 +1339,12 @@
                     </td>
 
                     <td>
-
                         <span class="status">
                             Confirmado
                         </span>
-
                     </td>
 
                 </tr>
-
 
 
                 <tr
@@ -1375,15 +1353,11 @@
                     data-price="205">
 
                     <td>
+                        Samaná
+                    </td>
 
-                        <div class="zone-name">
-                            Samaná
-                        </div>
-
-                        <div class="zone-province">
-                            Provincia Samaná
-                        </div>
-
+                    <td>
+                        Samaná
                     </td>
 
                     <td class="price">
@@ -1399,11 +1373,9 @@
                     </td>
 
                     <td>
-
                         <span class="status warning">
                             Pocos reportes
                         </span>
-
                     </td>
 
                 </tr>
@@ -1738,7 +1710,14 @@
                 <input
                     id="reportDate"
                     type="date"
+                    class="date-locked"
+                    readonly
                     required>
+
+                <span class="date-help">
+                    📅 La fecha se establece automáticamente
+                    y no puede modificarse.
+                </span>
 
             </div>
 
@@ -1776,9 +1755,6 @@
 
 /* =====================================
    DATOS DE DEMOSTRACION
-
-   Más adelante estos datos vendrán
-   directamente desde Firebase.
 ===================================== */
 
 const zonePrices = {
@@ -1837,8 +1813,6 @@ const zonePrices = {
 
 /* =====================================
    MUNICIPIOS DE DEMOSTRACION
-
-   Después tendremos una lista completa.
 ===================================== */
 
 const municipalities = {
@@ -1900,7 +1874,7 @@ const municipalities = {
 
 
 /* =====================================
-   ACTUALIZAR MUNICIPIOS
+   MUNICIPIOS
 ===================================== */
 
 function updateMunicipalities() {
@@ -1919,8 +1893,38 @@ function updateMunicipalities() {
     municipalitySelect.innerHTML = "";
 
 
+    if (!province) {
+
+        const option =
+            document.createElement("option");
+
+        option.value = "";
+
+        option.textContent =
+            "Selecciona primero una provincia";
+
+        municipalitySelect.appendChild(option);
+
+        updateLocalPrice();
+
+        return;
+
+    }
+
+
     const list =
         municipalities[province] || [];
+
+
+    const firstOption =
+        document.createElement("option");
+
+    firstOption.value = "";
+
+    firstOption.textContent =
+        "Selecciona una zona";
+
+    municipalitySelect.appendChild(firstOption);
 
 
     list.forEach(function(municipality) {
@@ -1944,7 +1948,7 @@ function updateMunicipalities() {
 
 
 /* =====================================
-   ACTUALIZAR PRECIO DE LA ZONA
+   PRECIO LOCAL
 ===================================== */
 
 function updateLocalPrice() {
@@ -1961,14 +1965,6 @@ function updateLocalPrice() {
         .value;
 
 
-    const key =
-        province + "|" + municipality;
-
-
-    const data =
-        zonePrices[key];
-
-
     const place =
         document
         .getElementById("localPlace");
@@ -1982,6 +1978,30 @@ function updateLocalPrice() {
     const meta =
         document
         .getElementById("localMeta");
+
+
+    if (!province || !municipality) {
+
+        place.textContent =
+            "Selecciona una zona";
+
+        price.textContent =
+            "—";
+
+        meta.textContent =
+            "El precio aparecerá aquí";
+
+        return;
+
+    }
+
+
+    const key =
+        province + "|" + municipality;
+
+
+    const data =
+        zonePrices[key];
 
 
     place.textContent =
@@ -2013,13 +2033,7 @@ function updateLocalPrice() {
 
 
 /* =====================================
-   UBICACION DEL USUARIO
-
-   Por ahora solo demostramos la
-   solicitud de permiso.
-
-   Más adelante conectaremos las
-   coordenadas con las zonas.
+   UBICACION
 ===================================== */
 
 function useMyLocation() {
@@ -2073,12 +2087,36 @@ function openModal() {
     .style.display = "flex";
 
 
+    /*
+       Establecemos la fecha automáticamente.
+
+       El usuario puede verla pero NO modificarla.
+    */
+
+    const today =
+        new Date();
+
+
+    const year =
+        today.getFullYear();
+
+
+    const month =
+        String(
+            today.getMonth() + 1
+        ).padStart(2, "0");
+
+
+    const day =
+        String(
+            today.getDate()
+        ).padStart(2, "0");
+
+
     document
     .getElementById("reportDate")
     .value =
-        new Date()
-        .toISOString()
-        .split("T")[0];
+        `${year}-${month}-${day}`;
 
 }
 
@@ -2099,7 +2137,7 @@ function closeModal() {
 
 
 /* =====================================
-   CERRAR AL TOCAR FUERA
+   CERRAR FUERA DEL MODAL
 ===================================== */
 
 document
@@ -2120,7 +2158,7 @@ document
 
 
 /* =====================================
-   MUNICIPIOS DEL FORMULARIO
+   MUNICIPIOS DEL REPORTE
 ===================================== */
 
 function updateReportMunicipalities() {
@@ -2139,8 +2177,36 @@ function updateReportMunicipalities() {
     select.innerHTML = "";
 
 
+    if (!province) {
+
+        const option =
+            document.createElement("option");
+
+        option.value = "";
+
+        option.textContent =
+            "Primero selecciona la provincia";
+
+        select.appendChild(option);
+
+        return;
+
+    }
+
+
     const list =
         municipalities[province] || [];
+
+
+    const firstOption =
+        document.createElement("option");
+
+    firstOption.value = "";
+
+    firstOption.textContent =
+        "Selecciona una zona";
+
+    select.appendChild(firstOption);
 
 
     list.forEach(function(municipality) {
@@ -2156,21 +2222,6 @@ function updateReportMunicipalities() {
 
     });
 
-
-    if (list.length === 0) {
-
-        const option =
-            document.createElement("option");
-
-        option.textContent =
-            "Zona no disponible todavía";
-
-        option.value = "";
-
-        select.appendChild(option);
-
-    }
-
 }
 
 
@@ -2184,11 +2235,37 @@ function submitReport(event) {
     event.preventDefault();
 
 
+    const date =
+        document
+        .getElementById("reportDate")
+        .value;
+
+
+    const province =
+        document
+        .getElementById("reportProvince")
+        .value;
+
+
+    const municipality =
+        document
+        .getElementById("reportMunicipality")
+        .value;
+
+
+    const price =
+        document
+        .getElementById("reportPrice")
+        .value;
+
+
     alert(
         "¡Gracias por contribuir! 🐷\n\n" +
-        "Tu reporte será enviado a revisión. " +
-        "En la próxima etapa lo conectaremos " +
-        "directamente con Firebase."
+        "Zona: " + municipality + "\n" +
+        "Precio: RD$" + price + "/kg\n" +
+        "Fecha: " + date + "\n\n" +
+        "En la próxima etapa este reporte " +
+        "se guardará directamente en Firebase."
     );
 
 

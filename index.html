@@ -97,13 +97,13 @@
         }
 
         /* =========================
-           HERO
+           PRECIO PRINCIPAL
         ========================= */
 
         .hero {
             background: white;
             border-radius: 20px;
-            padding: 30px;
+            padding: 32px 25px;
             text-align: center;
             box-shadow: 0 4px 18px rgba(0,0,0,0.06);
             margin-bottom: 18px;
@@ -119,35 +119,55 @@
             border-radius: 30px;
             font-weight: bold;
             font-size: 13px;
-            margin-bottom: 13px;
+            margin-bottom: 15px;
         }
 
         .hero h2 {
-            color: #647067;
-            font-size: 17px;
-            margin-bottom: 6px;
+            color: #59635c;
+            font-size: 18px;
+            margin-bottom: 10px;
         }
 
-        .national-price {
-            font-size: 48px;
+        .selected-place {
+            font-size: 25px;
             font-weight: 800;
             color: #14532d;
-            margin: 4px 0;
+            margin-bottom: 5px;
         }
 
-        .national-unit {
+        .selected-province {
+            color: #7a847c;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .main-price {
+            font-size: 50px;
+            font-weight: 800;
+            color: #14532d;
+            line-height: 1.1;
+        }
+
+        .main-unit {
             color: #69736c;
             font-size: 15px;
+            margin-top: 4px;
         }
 
-        .updated {
+        .main-meta {
             margin-top: 13px;
             color: #7b847d;
             font-size: 13px;
         }
 
+        .no-location {
+            color: #7b847d;
+            font-size: 15px;
+            margin-top: 8px;
+        }
+
         /* =========================
-           PRECIO EN TU ZONA
+           SELECTOR DE ZONA
         ========================= */
 
         .zone-card {
@@ -216,39 +236,13 @@
             border-color: #22c55e;
         }
 
-        .zone-result {
-            margin-top: 17px;
-            background: linear-gradient(135deg, #14532d, #166534);
-            color: white;
-            border-radius: 15px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-        }
-
-        .result-label {
+        .selection-message {
+            margin-top: 14px;
+            padding: 12px;
+            background: #f8faf8;
+            border-radius: 9px;
+            color: #68736b;
             font-size: 13px;
-            opacity: 0.85;
-        }
-
-        .result-zone {
-            font-size: 21px;
-            font-weight: bold;
-            margin-top: 4px;
-        }
-
-        .result-price {
-            font-size: 31px;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        .result-meta {
-            margin-top: 5px;
-            font-size: 12px;
-            opacity: 0.8;
         }
 
         /* =========================
@@ -325,7 +319,7 @@
         }
 
         /* =========================
-           SECCION
+           SECCIONES
         ========================= */
 
         .section {
@@ -388,12 +382,6 @@
 
         .zone-name {
             font-weight: bold;
-        }
-
-        .zone-province {
-            color: #7a847c;
-            font-size: 12px;
-            margin-top: 3px;
         }
 
         .price {
@@ -566,8 +554,6 @@
             outline: none;
         }
 
-        /* Fecha bloqueada */
-
         .date-locked {
             background: #f1f5f2 !important;
             color: #59635b;
@@ -623,11 +609,15 @@
             }
 
             .hero {
-                padding: 25px 15px;
+                padding: 27px 15px;
             }
 
-            .national-price {
-                font-size: 39px;
+            .main-price {
+                font-size: 40px;
+            }
+
+            .selected-place {
+                font-size: 22px;
             }
 
             .zone-heading {
@@ -641,15 +631,6 @@
 
             .location-fields {
                 grid-template-columns: 1fr;
-            }
-
-            .zone-result {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .result-price {
-                font-size: 28px;
             }
 
             .stats {
@@ -693,6 +674,10 @@
 <body>
 
 
+<!-- =========================
+     HEADER
+========================= -->
+
 <header>
 
     <div class="header-content">
@@ -732,7 +717,7 @@
 
 
 <!-- =========================
-     HERO
+     PRECIO PRINCIPAL
 ========================= -->
 
 <section class="hero">
@@ -741,20 +726,57 @@
         🇩🇴 República Dominicana
     </div>
 
+
     <h2>
         Consulta el precio del cerdo vivo en tu zona
     </h2>
 
-    <div class="national-price">
-        RD$ 190
+
+    <!--
+        Este será SIEMPRE el precio
+        de la zona seleccionada abajo.
+    -->
+
+    <div
+        class="selected-place"
+        id="mainPlace">
+
+        Selecciona tu zona
+
     </div>
 
-    <div class="national-unit">
-        Precio de referencia de la zona seleccionada
+
+    <div
+        class="selected-province"
+        id="mainProvince">
+
+        Provincia no seleccionada
+
     </div>
 
-    <div class="updated">
-        🕐 Actualizado hoy
+
+    <div
+        class="main-price"
+        id="mainPrice">
+
+        —
+
+    </div>
+
+
+    <div class="main-unit">
+
+        Precio de referencia por kilogramo
+
+    </div>
+
+
+    <div
+        class="main-meta"
+        id="mainMeta">
+
+        Selecciona una zona para consultar el precio
+
     </div>
 
 </section>
@@ -762,16 +784,18 @@
 
 
 <!-- =========================
-     PRECIO EN TU ZONA
+     SELECTOR
 ========================= -->
 
 <section class="zone-card">
 
+
     <div class="zone-heading">
 
         <h2>
-            📍 Precio en tu zona
+            📍 Selecciona tu zona
         </h2>
+
 
         <button
             class="location-button"
@@ -786,8 +810,8 @@
 
     <p class="zone-description">
 
-        Selecciona una provincia y después
-        consulta una zona específica.
+        Selecciona primero la provincia y luego
+        el municipio o zona donde compras o vendes.
 
     </p>
 
@@ -800,6 +824,7 @@
             <label>
                 Provincia
             </label>
+
 
             <select
                 id="locationProvince"
@@ -849,12 +874,13 @@
         <div class="field">
 
             <label>
-                Zona / Municipio
+                Municipio / Zona
             </label>
+
 
             <select
                 id="locationMunicipality"
-                onchange="updateLocalPrice()">
+                onchange="updateMainPrice()">
 
                 <option value="">
                     Selecciona primero una provincia
@@ -868,41 +894,15 @@
     </div>
 
 
-    <div class="zone-result">
+    <div
+        class="selection-message"
+        id="selectionMessage">
 
-        <div>
-
-            <div class="result-label">
-                Precio de referencia
-            </div>
-
-            <div
-                class="result-zone"
-                id="localPlace">
-
-                Selecciona una zona
-
-            </div>
-
-            <div class="result-meta"
-                 id="localMeta">
-
-                El precio aparecerá aquí
-
-            </div>
-
-        </div>
-
-
-        <div
-            class="result-price"
-            id="localPrice">
-
-            —
-
-        </div>
+        💡 Selecciona una zona para consultar
+        su precio de referencia.
 
     </div>
+
 
 </section>
 
@@ -1596,6 +1596,7 @@
                 🐷 Reportar precio
             </h3>
 
+
             <button
                 class="close-button"
                 onclick="closeModal()">
@@ -1615,6 +1616,7 @@
                 <label>
                     Provincia
                 </label>
+
 
                 <select
                     id="reportProvince"
@@ -1666,8 +1668,9 @@
             <div class="form-group">
 
                 <label>
-                    Municipio o zona
+                    Municipio / Zona
                 </label>
+
 
                 <select
                     id="reportMunicipality"
@@ -1689,6 +1692,7 @@
                     Precio por kilogramo
                 </label>
 
+
                 <input
                     id="reportPrice"
                     type="number"
@@ -1707,6 +1711,7 @@
                     Fecha del precio
                 </label>
 
+
                 <input
                     id="reportDate"
                     type="date"
@@ -1714,9 +1719,12 @@
                     readonly
                     required>
 
+
                 <span class="date-help">
+
                     📅 La fecha se establece automáticamente
                     y no puede modificarse.
+
                 </span>
 
             </div>
@@ -1755,6 +1763,9 @@
 
 /* =====================================
    DATOS DE DEMOSTRACION
+
+   Estos datos posteriormente serán
+   reemplazados por Firebase.
 ===================================== */
 
 const zonePrices = {
@@ -1812,7 +1823,7 @@ const zonePrices = {
 
 
 /* =====================================
-   MUNICIPIOS DE DEMOSTRACION
+   MUNICIPIOS
 ===================================== */
 
 const municipalities = {
@@ -1874,7 +1885,7 @@ const municipalities = {
 
 
 /* =====================================
-   MUNICIPIOS
+   CAMBIAR MUNICIPIOS
 ===================================== */
 
 function updateMunicipalities() {
@@ -1895,36 +1906,26 @@ function updateMunicipalities() {
 
     if (!province) {
 
-        const option =
-            document.createElement("option");
+        municipalitySelect.innerHTML =
+            `<option value="">
+                Selecciona primero una provincia
+            </option>`;
 
-        option.value = "";
-
-        option.textContent =
-            "Selecciona primero una provincia";
-
-        municipalitySelect.appendChild(option);
-
-        updateLocalPrice();
+        resetMainPrice();
 
         return;
 
     }
 
 
+    municipalitySelect.innerHTML =
+        `<option value="">
+            Selecciona una zona
+        </option>`;
+
+
     const list =
         municipalities[province] || [];
-
-
-    const firstOption =
-        document.createElement("option");
-
-    firstOption.value = "";
-
-    firstOption.textContent =
-        "Selecciona una zona";
-
-    municipalitySelect.appendChild(firstOption);
 
 
     list.forEach(function(municipality) {
@@ -1941,17 +1942,17 @@ function updateMunicipalities() {
     });
 
 
-    updateLocalPrice();
+    resetMainPrice();
 
 }
 
 
 
 /* =====================================
-   PRECIO LOCAL
+   ACTUALIZAR PRECIO PRINCIPAL
 ===================================== */
 
-function updateLocalPrice() {
+function updateMainPrice() {
 
     const province =
         document
@@ -1965,31 +1966,34 @@ function updateLocalPrice() {
         .value;
 
 
-    const place =
+    const mainPlace =
         document
-        .getElementById("localPlace");
+        .getElementById("mainPlace");
 
 
-    const price =
+    const mainProvince =
         document
-        .getElementById("localPrice");
+        .getElementById("mainProvince");
 
 
-    const meta =
+    const mainPrice =
         document
-        .getElementById("localMeta");
+        .getElementById("mainPrice");
+
+
+    const mainMeta =
+        document
+        .getElementById("mainMeta");
+
+
+    const message =
+        document
+        .getElementById("selectionMessage");
 
 
     if (!province || !municipality) {
 
-        place.textContent =
-            "Selecciona una zona";
-
-        price.textContent =
-            "—";
-
-        meta.textContent =
-            "El precio aparecerá aquí";
+        resetMainPrice();
 
         return;
 
@@ -2004,27 +2008,45 @@ function updateLocalPrice() {
         zonePrices[key];
 
 
-    place.textContent =
-        municipality + ", " + province;
+    mainPlace.textContent =
+        municipality;
+
+
+    mainProvince.textContent =
+        province;
 
 
     if (data) {
 
-        price.textContent =
-            "RD$" + data.price + "/kg";
+        mainPrice.textContent =
+            "RD$" + data.price;
 
-        meta.textContent =
+
+        mainMeta.textContent =
             data.reports +
             " reportes · " +
             data.updated;
 
+
+        message.textContent =
+            "✅ Precio consultado para " +
+            municipality +
+            ", " +
+            province +
+            ".";
+
     } else {
 
-        price.textContent =
-            "Sin precio";
+        mainPrice.textContent =
+            "Sin datos";
 
-        meta.textContent =
-            "Todavía no hay suficientes reportes recientes";
+
+        mainMeta.textContent =
+            "Todavía no existen suficientes reportes recientes para esta zona.";
+
+
+        message.textContent =
+            "ℹ️ Esta zona todavía no tiene un precio de referencia disponible.";
 
     }
 
@@ -2033,7 +2055,52 @@ function updateLocalPrice() {
 
 
 /* =====================================
+   REINICIAR PRECIO
+===================================== */
+
+function resetMainPrice() {
+
+    document
+    .getElementById("mainPlace")
+    .textContent =
+        "Selecciona tu zona";
+
+
+    document
+    .getElementById("mainProvince")
+    .textContent =
+        "Provincia no seleccionada";
+
+
+    document
+    .getElementById("mainPrice")
+    .textContent =
+        "—";
+
+
+    document
+    .getElementById("mainMeta")
+    .textContent =
+        "Selecciona una zona para consultar el precio";
+
+
+    document
+    .getElementById("selectionMessage")
+    .textContent =
+        "💡 Selecciona una zona para consultar su precio de referencia.";
+
+}
+
+
+
+/* =====================================
    UBICACION
+
+   Por ahora solamente detectamos que el
+   navegador tiene acceso a GPS.
+
+   Posteriormente conectaremos las
+   coordenadas con la zona correspondiente.
 ===================================== */
 
 function useMyLocation() {
@@ -2054,9 +2121,9 @@ function useMyLocation() {
         function(position) {
 
             alert(
-                "Ubicación detectada correctamente. " +
-                "En la próxima etapa conectaremos " +
-                "la ubicación con tu zona."
+                "📍 Ubicación detectada correctamente.\n\n" +
+                "En la próxima etapa conectaremos automáticamente " +
+                "tu ubicación con tu municipio o zona."
             );
 
         },
@@ -2064,8 +2131,8 @@ function useMyLocation() {
         function() {
 
             alert(
-                "No pudimos obtener tu ubicación. " +
-                "Puedes seleccionar tu provincia y municipio manualmente."
+                "No pudimos obtener tu ubicación.\n\n" +
+                "Puedes seleccionar tu provincia y zona manualmente."
             );
 
         }
@@ -2077,7 +2144,7 @@ function useMyLocation() {
 
 
 /* =====================================
-   ABRIR MODAL
+   MODAL
 ===================================== */
 
 function openModal() {
@@ -2087,11 +2154,27 @@ function openModal() {
     .style.display = "flex";
 
 
-    /*
-       Establecemos la fecha automáticamente.
+    setTodayDate();
 
-       El usuario puede verla pero NO modificarla.
-    */
+}
+
+
+
+function closeModal() {
+
+    document
+    .getElementById("modal")
+    .style.display = "none";
+
+}
+
+
+
+/* =====================================
+   FECHA AUTOMATICA
+===================================== */
+
+function setTodayDate() {
 
     const today =
         new Date();
@@ -2123,21 +2206,7 @@ function openModal() {
 
 
 /* =====================================
-   CERRAR MODAL
-===================================== */
-
-function closeModal() {
-
-    document
-    .getElementById("modal")
-    .style.display = "none";
-
-}
-
-
-
-/* =====================================
-   CERRAR FUERA DEL MODAL
+   CERRAR MODAL AL HACER CLICK FUERA
 ===================================== */
 
 document
@@ -2158,7 +2227,7 @@ document
 
 
 /* =====================================
-   MUNICIPIOS DEL REPORTE
+   MUNICIPIOS DEL FORMULARIO
 ===================================== */
 
 function updateReportMunicipalities() {
@@ -2179,34 +2248,24 @@ function updateReportMunicipalities() {
 
     if (!province) {
 
-        const option =
-            document.createElement("option");
-
-        option.value = "";
-
-        option.textContent =
-            "Primero selecciona la provincia";
-
-        select.appendChild(option);
+        select.innerHTML =
+            `<option value="">
+                Primero selecciona la provincia
+            </option>`;
 
         return;
 
     }
 
 
+    select.innerHTML =
+        `<option value="">
+            Selecciona una zona
+        </option>`;
+
+
     const list =
         municipalities[province] || [];
-
-
-    const firstOption =
-        document.createElement("option");
-
-    firstOption.value = "";
-
-    firstOption.textContent =
-        "Selecciona una zona";
-
-    select.appendChild(firstOption);
 
 
     list.forEach(function(municipality) {
@@ -2228,6 +2287,11 @@ function updateReportMunicipalities() {
 
 /* =====================================
    ENVIAR REPORTE
+
+   Por ahora solamente muestra una
+   confirmación.
+
+   Después Firebase guardará el reporte.
 ===================================== */
 
 function submitReport(event) {
@@ -2261,9 +2325,18 @@ function submitReport(event) {
 
     alert(
         "¡Gracias por contribuir! 🐷\n\n" +
-        "Zona: " + municipality + "\n" +
-        "Precio: RD$" + price + "/kg\n" +
-        "Fecha: " + date + "\n\n" +
+        "Zona: " +
+        municipality +
+        "\n" +
+        "Provincia: " +
+        province +
+        "\n" +
+        "Precio: RD$" +
+        price +
+        "/kg\n" +
+        "Fecha: " +
+        date +
+        "\n\n" +
         "En la próxima etapa este reporte " +
         "se guardará directamente en Firebase."
     );
@@ -2278,14 +2351,16 @@ function submitReport(event) {
     document
     .getElementById("reportMunicipality")
     .innerHTML =
-        '<option value="">Primero selecciona la provincia</option>';
+        `<option value="">
+            Primero selecciona la provincia
+        </option>`;
 
 }
 
 
 
 /* =====================================
-   BUSCAR ZONAS
+   BUSCAR PRECIOS
 ===================================== */
 
 function filterPrices() {
@@ -2328,15 +2403,10 @@ function filterPrices() {
             zone + " " + province;
 
 
-        if (text.includes(search)) {
-
-            row.style.display = "";
-
-        } else {
-
-            row.style.display = "none";
-
-        }
+        row.style.display =
+            text.includes(search)
+                ? ""
+                : "none";
 
     });
 
@@ -2351,7 +2421,7 @@ function filterPrices() {
 
     if (sort === "high") {
 
-        visibleRows.sort(function(a,b) {
+        visibleRows.sort(function(a, b) {
 
             return Number(b.dataset.price) -
                    Number(a.dataset.price);
@@ -2363,7 +2433,7 @@ function filterPrices() {
 
     if (sort === "low") {
 
-        visibleRows.sort(function(a,b) {
+        visibleRows.sort(function(a, b) {
 
             return Number(a.dataset.price) -
                    Number(b.dataset.price);
@@ -2381,13 +2451,6 @@ function filterPrices() {
 
 }
 
-
-
-/* =====================================
-   INICIALIZAR
-===================================== */
-
-updateMunicipalities();
 
 </script>
 

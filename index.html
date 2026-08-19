@@ -2348,15 +2348,9 @@ function updateReportMunicipalities() {
    Después Firebase guardará el reporte.
 ===================================== */
 
-function submitReport(event) {
+async function submitReport(event) {
 
     event.preventDefault();
-
-
-    const date =
-        document
-        .getElementById("reportDate")
-        .value;
 
 
     const province =
@@ -2372,42 +2366,136 @@ function submitReport(event) {
 
 
     const price =
+        Number(
+            document
+            .getElementById("reportPrice")
+            .value
+        );
+
+
+    // La fecha visible para el usuario
+    // sigue siendo la fecha actual.
+    const date =
         document
-        .getElementById("reportPrice")
+        .getElementById("reportDate")
         .value;
 
 
-    alert(
-        "¡Gracias por contribuir! 🐷\n\n" +
-        "Zona: " +
-        municipality +
-        "\n" +
-        "Provincia: " +
-        province +
-        "\n" +
-        "Precio: RD$" +
-        price +
-        "/kg\n" +
-        "Fecha: " +
-        date +
-        "\n\n" +
-        "En la próxima etapa este reporte " +
-        "se guardará directamente en Firebase."
-    );
+    // Validaciones
+    if (!province) {
+
+        alert(
+            "Selecciona una provincia."
+        );
+
+        return;
+
+    }
 
 
-    closeModal();
+    if (!municipality) {
+
+        alert(
+            "Selecciona una zona."
+        );
+
+        return;
+
+    }
 
 
-    event.target.reset();
+    if (!price || price <= 0) {
+
+        alert(
+            "Introduce un precio válido."
+        );
+
+        return;
+
+    }
 
 
-    document
-    .getElementById("reportMunicipality")
-    .innerHTML =
-        `<option value="">
-            Primero selecciona la provincia
-        </option>`;
+    try {
+
+        /*
+         * Guardamos el reporte en Firestore.
+         *
+         * Cada reporte será un documento
+         * independiente dentro de:
+         *
+         * reports
+         */
+
+        await window.firebaseAddDoc(
+
+            window.firebaseCollection(
+                window.firebaseDB,
+                "reports"
+            ),
+
+            {
+
+                provincia: province,
+
+                zona: municipality,
+
+                precio: price,
+
+                fecha: date,
+
+                creadoEn:
+                    window.firebaseServerTimestamp()
+
+            }
+
+        );
+
+
+        alert(
+            "✅ ¡Reporte guardado correctamente!\n\n" +
+
+            "Zona: " +
+            municipality +
+            ", " +
+            province +
+
+            "\nPrecio: RD$" +
+            price +
+            "/kg" +
+
+            "\nFecha: " +
+            date
+        );
+
+
+        closeModal();
+
+
+        event.target.reset();
+
+
+        document
+        .getElementById("reportMunicipality")
+        .innerHTML =
+            `<option value="">
+                Primero selecciona la provincia
+            </option>`;
+
+
+    } catch (error) {
+
+        console.error(
+            "Error al guardar el reporte:",
+            error
+        );
+
+
+        alert(
+            "❌ No se pudo guardar el reporte.\n\n" +
+            "Revisa tu conexión e inténtalo nuevamente."
+        );
+
+    }
 
 }
 

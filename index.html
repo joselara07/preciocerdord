@@ -2649,21 +2649,23 @@ async function submitReport(event) {
 
 
     const municipality =
-        document
-        .getElementById("reportMunicipality")
-        .value;
+    document
+    .getElementById("reportMunicipality")
+    .value;
 
-    const district =
+
+const district =
     document
     .getElementById("reportDistrict")
     .value;
 
-    const price =
-        Number(
-            document
-            .getElementById("reportPrice")
-            .value
-        );
+
+const price =
+    Number(
+        document
+        .getElementById("reportPrice")
+        .value
+    );
 
 
     // La fecha visible para el usuario
@@ -2721,29 +2723,29 @@ async function submitReport(event) {
 
         await window.firebaseAddDoc(
 
-            window.firebaseCollection(
-                window.firebaseDB,
-                "reports"
-            ),
+    window.firebaseCollection(
+        window.firebaseDB,
+        "reports"
+    ),
 
-           {
+    {
 
-    provincia: province,
+        provincia: province,
 
-    municipio: municipality,
+        municipio: municipality,
 
-    distrito: district || null,
+        distrito: district || null,
 
-    precio: price,
+        precio: price,
 
-    fecha: date,
+        fecha: date,
 
-    creadoEn:
-        window.firebaseServerTimestamp()
+        creadoEn:
+            window.firebaseServerTimestamp()
 
-}
+    }
 
-        );
+);
 
 
         alert(

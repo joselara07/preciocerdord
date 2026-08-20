@@ -2930,18 +2930,7 @@ input[type="number"].price-input {
                         applyDetectedTerritory(
                             territory
                         );
-
-                        alert(
-                            "📍 ¡Ubicación detectada correctamente!\n\n" +
-                            (territory.district || territory.municipality) +
-                            "\n" +
-                            territory.municipality +
-                            ", " +
-                            territory.province +
-                            "\n\n" +
-                            "El precio mostrado corresponde a esa zona."
-                        );
-
+                        
                     } catch (error) {
 
                         console.error(

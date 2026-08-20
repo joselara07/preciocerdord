@@ -2653,6 +2653,10 @@ async function submitReport(event) {
         .getElementById("reportMunicipality")
         .value;
 
+    const district =
+    document
+    .getElementById("reportDistrict")
+    .value;
 
     const price =
         Number(
@@ -2684,13 +2688,13 @@ async function submitReport(event) {
 
     if (!municipality) {
 
-        alert(
-            "Selecciona una zona."
-        );
+    alert(
+        "Selecciona un municipio."
+    );
 
-        return;
+    return;
 
-    }
+}
 
 
     if (!price || price <= 0) {
@@ -2722,39 +2726,48 @@ async function submitReport(event) {
                 "reports"
             ),
 
-            {
+           {
 
-                provincia: province,
+    provincia: province,
 
-                zona: municipality,
+    municipio: municipality,
 
-                precio: price,
+    distrito: district || null,
 
-                fecha: date,
+    precio: price,
 
-                creadoEn:
-                    window.firebaseServerTimestamp()
+    fecha: date,
 
-            }
+    creadoEn:
+        window.firebaseServerTimestamp()
+
+}
 
         );
 
 
         alert(
-            "✅ ¡Reporte guardado correctamente!\n\n" +
+    "✅ ¡Reporte guardado correctamente!\n\n" +
 
-            "Zona: " +
-            municipality +
-            ", " +
-            province +
+    "Provincia: " +
+    province +
 
-            "\nPrecio: RD$" +
-            price +
-            "/kg" +
+    "\nMunicipio: " +
+    municipality +
 
-            "\nFecha: " +
-            date
-        );
+    (
+        district
+            ? "\nDistrito: " + district
+            : "\nDistrito: Todo el municipio"
+    ) +
+
+    "\nPrecio: RD$" +
+    price +
+    "/kg" +
+
+    "\nFecha: " +
+    date
+);
 
 
         closeModal();

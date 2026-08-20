@@ -2410,11 +2410,240 @@ input[type="number"].price-input {
         // GEOLOCALIZACIÓN
         // =================================================
 
-        function useMyLocation() {
+        function normalizeGeoText(value) {
+
+            return String(value || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .trim();
+
+        }
+
+
+        function getTerritorialSearchData() {
 
             if (
-                !navigator.geolocation
+                typeof locations === "undefined" ||
+                !locations
             ) {
+                return [];
+            }
+
+            const data = [];
+
+            Object.keys(locations).forEach(
+                function(province) {
+
+                    const municipalities =
+                        locations[province] || {};
+
+                    Object.keys(municipalities).forEach(
+                        function(municipality) {
+
+                            const info =
+                                municipalities[municipality] || {};
+
+                            const districts =
+                                Array.isArray(info.districts)
+                                    ? info.districts
+                                    : [];
+
+                            data.push({
+                                province: province,
+                                municipality: municipality,
+                                district: "",
+                                type: "municipio"
+                            });
+
+                            districts.forEach(
+                                function(district) {
+
+                                    data.push({
+                                        province: province,
+                                        municipality: municipality,
+                                        district: district,
+                                        type: "zona"
+                                    });
+
+                                }
+                            );
+
+                        }
+                    );
+
+                }
+            );
+
+            return data;
+
+        }
+
+
+        function findTerritoryFromAddress(address) {
+
+            const territory =
+                getTerritorialSearchData();
+
+            if (!territory.length) {
+                return null;
+            }
+
+            const addressValues =
+                Object.values(address || {})
+                    .map(function(value) {
+                        return normalizeGeoText(value);
+                    })
+                    .filter(Boolean);
+
+            const normalizedAddress =
+                addressValues.join(" | ");
+
+            /* Primero buscamos municipio + provincia. */
+            let match = territory.find(
+                function(item) {
+
+                    const municipality =
+                        normalizeGeoText(item.municipality);
+
+                    const province =
+                        normalizeGeoText(item.province);
+
+                    return (
+                        municipality &&
+                        province &&
+                        normalizedAddress.includes(municipality) &&
+                        normalizedAddress.includes(province)
+                    );
+
+                }
+            );
+
+            if (match) {
+                return match;
+            }
+
+            /* Después municipio solamente. */
+            match = territory.find(
+                function(item) {
+
+                    const municipality =
+                        normalizeGeoText(item.municipality);
+
+                    return (
+                        municipality &&
+                        normalizedAddress.includes(municipality)
+                    );
+
+                }
+            );
+
+            if (match) {
+                return match;
+            }
+
+            /* Finalmente intentamos identificar una zona/distrito. */
+            return territory.find(
+                function(item) {
+
+                    return (
+                        item.district &&
+                        normalizedAddress.includes(
+                            normalizeGeoText(item.district)
+                        )
+                    );
+
+                }
+            ) || null;
+
+        }
+
+
+        async function reverseGeocode(latitude, longitude) {
+
+            const url =
+                "https://nominatim.openstreetmap.org/reverse" +
+                "?format=jsonv2" +
+                "&lat=" + encodeURIComponent(latitude) +
+                "&lon=" + encodeURIComponent(longitude) +
+                "&zoom=18" +
+                "&addressdetails=1" +
+                "&accept-language=es";
+
+            const response =
+                await fetch(url, {
+                    method: "GET",
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                });
+
+            if (!response.ok) {
+                throw new Error(
+                    "No se pudo consultar la dirección de la ubicación."
+                );
+            }
+
+            return await response.json();
+
+        }
+
+
+        function applyDetectedTerritory(territory) {
+
+            const province =
+                document.getElementById("locationProvince");
+
+            const municipality =
+                document.getElementById("locationMunicipality");
+
+            const district =
+                document.getElementById("locationDistrict");
+
+            const search =
+                document.getElementById("locationSearch");
+
+            if (!province || !municipality) {
+                return false;
+            }
+
+            province.value = territory.province;
+            updateMunicipalities();
+
+            municipality.value = territory.municipality;
+            updateMainDistricts();
+
+            if (district) {
+                district.value = territory.district || "";
+            }
+
+            if (search) {
+                search.value =
+                    territory.district ||
+                    territory.municipality;
+            }
+
+            updateMainPrice();
+
+            return true;
+
+        }
+
+
+        function useMyLocation() {
+
+            if (!window.isSecureContext) {
+
+                alert(
+                    "📍 La ubicación solo puede utilizarse desde una conexión segura (HTTPS).\n\n" +
+                    "Como tu plataforma está en GitHub Pages, asegúrate de abrir la dirección que comienza con https://."
+                );
+
+                return;
+
+            }
+
+            if (!navigator.geolocation) {
 
                 alert(
                     "Tu navegador no permite utilizar la ubicación."
@@ -2424,26 +2653,153 @@ input[type="number"].price-input {
 
             }
 
+            const button =
+                document.querySelector(
+                    '[onclick="useMyLocation()"]'
+                );
+
+            if (button) {
+                button.disabled = true;
+                button.dataset.originalText = button.textContent;
+                button.textContent = "📍 Detectando ubicación...";
+            }
 
             navigator.geolocation.getCurrentPosition(
 
-                function() {
+                async function(position) {
 
-                    alert(
-                        "📍 Ubicación detectada correctamente.\n\n" +
-                        "La detección automática del municipio " +
-                        "la conectaremos en una próxima etapa."
-                    );
+                    try {
+
+                        const latitude =
+                            position.coords.latitude;
+
+                        const longitude =
+                            position.coords.longitude;
+
+                        console.log(
+                            "📍 Coordenadas detectadas:",
+                            latitude,
+                            longitude
+                        );
+
+                        const data =
+                            await reverseGeocode(
+                                latitude,
+                                longitude
+                            );
+
+                        console.log(
+                            "📍 Dirección detectada:",
+                            data.address
+                        );
+
+                        const territory =
+                            findTerritoryFromAddress(
+                                data.address || {}
+                            );
+
+                        if (!territory) {
+
+                            throw new Error(
+                                "La dirección fue encontrada, pero no coincide con nuestra división territorial."
+                            );
+
+                        }
+
+                        applyDetectedTerritory(
+                            territory
+                        );
+
+                        alert(
+                            "📍 ¡Ubicación detectada correctamente!\n\n" +
+                            (territory.district || territory.municipality) +
+                            "\n" +
+                            territory.municipality +
+                            ", " +
+                            territory.province +
+                            "\n\n" +
+                            "El precio mostrado corresponde a esa zona."
+                        );
+
+                    } catch (error) {
+
+                        console.error(
+                            "Error convirtiendo coordenadas en territorio:",
+                            error
+                        );
+
+                        alert(
+                            "📍 Se detectó tu ubicación, pero no pudimos identificar automáticamente tu municipio.\n\n" +
+                            "Puedes buscarlo manualmente escribiendo el nombre en el buscador."
+                        );
+
+                    } finally {
+
+                        if (button) {
+                            button.disabled = false;
+                            button.textContent =
+                                button.dataset.originalText ||
+                                "📍 Usar mi ubicación";
+                        }
+
+                    }
 
                 },
 
-                function() {
+                function(error) {
 
-                    alert(
-                        "No pudimos obtener tu ubicación.\n\n" +
-                        "Puedes seleccionar tu provincia y municipio manualmente."
+                    console.error(
+                        "Error de geolocalización:",
+                        error
                     );
 
+                    let message =
+                        "No pudimos obtener tu ubicación.";
+
+                    if (
+                        error.code ===
+                        error.PERMISSION_DENIED
+                    ) {
+
+                        message =
+                            "El navegador bloqueó el acceso a tu ubicación.\n\n" +
+                            "Permite la ubicación para este sitio e inténtalo nuevamente.";
+
+                    } else if (
+                        error.code ===
+                        error.POSITION_UNAVAILABLE
+                    ) {
+
+                        message =
+                            "El dispositivo no pudo determinar tu ubicación.\n\n" +
+                            "Comprueba que tengas activada la ubicación/GPS.";
+
+                    } else if (
+                        error.code ===
+                        error.TIMEOUT
+                    ) {
+
+                        message =
+                            "La detección de ubicación tardó demasiado.\n\n" +
+                            "Inténtalo nuevamente.";
+
+                    }
+
+                    alert("📍 " + message);
+
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent =
+                            button.dataset.originalText ||
+                            "📍 Usar mi ubicación";
+                    }
+
+                },
+
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 300000
                 }
 
             );

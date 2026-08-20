@@ -1667,24 +1667,45 @@
 
 
 
-            <div class="form-group">
+           <div class="form-group">
 
-                <label>
-                    Municipio / Zona
-                </label>
+    <label>
+        Municipio
+    </label>
 
 
-                <select
-                    id="reportMunicipality"
-                    required>
+    <select
+        id="reportMunicipality"
+        onchange="updateReportDistricts()"
+        required>
 
-                    <option value="">
-                        Primero selecciona la provincia
-                    </option>
+        <option value="">
+            Primero selecciona la provincia
+        </option>
 
-                </select>
+    </select>
 
-            </div>
+</div>
+
+
+<div class="form-group">
+
+    <label>
+        Distrito municipal
+    </label>
+
+
+    <select
+        id="reportDistrict">
+
+        <option value="">
+            Selecciona primero el municipio
+        </option>
+
+    </select>
+
+</div>
+
 
 
 
@@ -2434,19 +2455,34 @@ function updateReportMunicipalities() {
         .value;
 
 
-    const select =
+    const municipalitySelect =
         document
         .getElementById("reportMunicipality");
 
 
-    select.innerHTML = "";
+    const districtSelect =
+        document
+        .getElementById("reportDistrict");
 
 
+    // Limpiar municipio y distrito
+    municipalitySelect.innerHTML = "";
+
+    districtSelect.innerHTML = "";
+
+
+    // Si no hay provincia
     if (!province) {
 
-        select.innerHTML =
+        municipalitySelect.innerHTML =
             `<option value="">
                 Primero selecciona la provincia
+            </option>`;
+
+
+        districtSelect.innerHTML =
+            `<option value="">
+                Primero selecciona el municipio
             </option>`;
 
         return;
@@ -2454,28 +2490,139 @@ function updateReportMunicipalities() {
     }
 
 
-    select.innerHTML =
+    // Opción inicial
+    municipalitySelect.innerHTML =
         `<option value="">
-            Selecciona una zona
+            Selecciona un municipio
         </option>`;
 
 
-    const list =
-        municipalities[province] || [];
+    districtSelect.innerHTML =
+        `<option value="">
+            Selecciona primero el municipio
+        </option>`;
 
 
-    list.forEach(function(municipality) {
+    // Obtener municipios de la provincia
+    const provinceData =
+        locations[province];
 
-        const option =
-            document.createElement("option");
 
-        option.value = municipality;
+    if (!provinceData) {
 
-        option.textContent = municipality;
+        console.warn(
+            "No existen datos territoriales para:",
+            province
+        );
 
-        select.appendChild(option);
+        return;
 
-    });
+    }
+
+
+    // Crear municipios
+    Object.keys(provinceData).forEach(
+        function(municipality) {
+
+            const option =
+                document.createElement("option");
+
+            option.value =
+                municipality;
+
+            option.textContent =
+                municipality;
+
+            municipalitySelect.appendChild(
+                option
+            );
+
+        }
+    );
+
+}
+
+    function updateReportDistricts() {
+
+    const province =
+        document
+        .getElementById("reportProvince")
+        .value;
+
+
+    const municipality =
+        document
+        .getElementById("reportMunicipality")
+        .value;
+
+
+    const districtSelect =
+        document
+        .getElementById("reportDistrict");
+
+
+    districtSelect.innerHTML = "";
+
+
+    if (!province || !municipality) {
+
+        districtSelect.innerHTML =
+            `<option value="">
+                Selecciona primero el municipio
+            </option>`;
+
+        return;
+
+    }
+
+
+    const districts =
+        locations[province][municipality];
+
+
+    // Algunos municipios pueden no tener
+    // distritos municipales registrados
+    if (
+        !districts ||
+        districts.length === 0
+    ) {
+
+        districtSelect.innerHTML =
+            `<option value="">
+                Todo el municipio
+            </option>`;
+
+        return;
+
+    }
+
+
+    districtSelect.innerHTML =
+        `<option value="">
+            Selecciona un distrito municipal
+        </option>`;
+
+
+    districts.forEach(
+        function(district) {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                district;
+
+            option.textContent =
+                district;
+
+            districtSelect.appendChild(
+                option
+            );
+
+        }
+    );
 
 }
 

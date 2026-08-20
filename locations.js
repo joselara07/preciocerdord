@@ -1,818 +1,427 @@
-const locations = {
+/*
+=========================================================
+ PRECIO CERDO RD
+ Estructura territorial:
+ Provincia → Municipio → Distrito municipal
 
-    "Distrito Nacional": {
+ Fuente territorial:
+ División Territorial de la ONE / Datos-Rep-Dom
+=========================================================
+*/
 
-        "Santo Domingo de Guzmán": []
 
-    },
+const locations = {};
 
 
-    "Azua": {
+// =======================================================
+// FUENTES DE DATOS TERRITORIALES
+// =======================================================
 
-        "Azua": [
-            "Barro Arriba",
-            "Las Barías-La Estancia",
-            "Los Jovillos",
-            "Puerto Viejo"
-        ],
+const TERRITORY_SOURCES = {
 
-        "Las Charcas": [
-            "Palmar de Ocoa"
-        ],
+    provinces:
+        "https://raw.githubusercontent.com/DannyFeliz/Datos-Rep-Dom/master/JSON/provincias.json",
 
-        "Las Yayas de Viajama": [
-            "Villarpando",
-            "Hato Nuevo Cortés"
-        ],
+    municipalities:
+        "https://raw.githubusercontent.com/DannyFeliz/Datos-Rep-Dom/master/JSON/municipios.json",
 
-        "Padre Las Casas": [
-            "Las Lagunas",
-            "La Siembra",
-            "Monte Bonito",
-            "Los Fríos"
-        ],
+    districts:
+        "https://raw.githubusercontent.com/DannyFeliz/Datos-Rep-Dom/master/JSON/distritos.json"
 
-        "Peralta": [],
+};
 
-        "Sabana Yegua": [
-            "Proyecto 4",
-            "Ganadero",
-            "Proyecto 2-C"
-        ],
 
-        "Pueblo Viejo": [
-            "El Rosario"
-        ],
+// =======================================================
+// NORMALIZAR NOMBRES
+// =======================================================
 
-        "Tábara Arriba": [
-            "Tábara Abajo",
-            "Amiama Gómez",
-            "Los Toros"
-        ],
+function cleanTerritoryName(name) {
 
-        "Guayabal": [],
+    if (!name) {
+        return "";
+    }
 
-        "Estebanía": []
 
-    },
+    return name
 
+        // Eliminar indicador de distrito municipal
+        .replace(/\s*\(DM\)\s*$/i, "")
 
-    "Baoruco": {
+        // Espacios repetidos
+        .replace(/\s+/g, " ")
 
-        "Neiba": [
-            "El Palmar"
-        ],
+        // Espacios al inicio/final
+        .trim();
 
-        "Galván": [
-            "El Salado"
-        ],
+}
 
-        "Tamayo": [
-            "Uvilla",
-            "Santana",
-            "Monserrate o Montserrat",
-            "Cabeza de Toro",
-            "Mena",
-            "Santa Bárbara El 6"
-        ],
 
-        "Villa Jaragua": [
-            "Las Clavellinas"
-        ],
+// =======================================================
+// CORRECCIONES DE NOMBRES
+// =======================================================
 
-        "Los Ríos": []
+function normalizeProvinceName(name) {
 
-    },
+    const cleaned =
+        cleanTerritoryName(name);
 
 
-    "Barahona": {
+    const corrections = {
 
-        "Barahona": [
-            "El Cachón",
-            "La Guázara",
-            "Villa Central"
-        ],
+        "Sanchez Ramírez":
+            "Sánchez Ramírez",
 
-        "Cabral": [],
+        "Sanchez Ramirez":
+            "Sánchez Ramírez"
 
-        "Enriquillo": [
-            "Arroyo Dulce"
-        ],
+    };
 
-        "Paraíso": [
-            "Los Patos"
-        ],
 
-        "Vicente Noble": [
-            "Canoa",
-            "Quita Coraza",
-            "Fondo Negro"
-        ],
+    return corrections[cleaned]
+        || cleaned;
 
-        "El Peñón": [],
+}
 
-        "La Ciénaga": [],
 
-        "Fundación": [
-            "Pescadería"
-        ],
+// =======================================================
+// CARGAR ESTRUCTURA TERRITORIAL
+// =======================================================
 
-        "Las Salinas": [],
+async function loadLocations() {
 
-        "Polo": [],
+    try {
 
-        "Jaquimeyes": []
+        console.log(
+            "Cargando división territorial..."
+        );
 
-    },
 
+        const [
 
-    "Dajabón": {
+            provincesResponse,
 
-        "Dajabón": [
-            "Cañongo"
-        ],
+            municipalitiesResponse,
 
-        "Loma de Cabrera": [
-            "Capotillo",
-            "Santiago de La Cruz"
-        ],
+            districtsResponse
 
-        "Partido": [
-            "Manuel Bueno"
-        ],
+        ] = await Promise.all([
 
-        "Restauración": [],
+            fetch(
+                TERRITORY_SOURCES.provinces
+            ),
 
-        "El Pino": []
+            fetch(
+                TERRITORY_SOURCES.municipalities
+            ),
 
-    },
+            fetch(
+                TERRITORY_SOURCES.districts
+            )
 
+        ]);
 
-    "Duarte": {
 
-        "San Francisco de Macorís": [
-            "La Peña",
-            "Cenoví",
-            "Jaya",
-            "Presidente Don Antonio Guzmán Fernández"
-        ],
+        if (
 
-        "Arenoso": [
-            "Las Coles",
-            "El Aguacate"
-        ],
+            !provincesResponse.ok ||
+            !municipalitiesResponse.ok ||
+            !districtsResponse.ok
 
-        "Castillo": [],
+        ) {
 
-        "Pimentel": [],
+            throw new Error(
+                "No se pudieron cargar los datos territoriales."
+            );
 
-        "Villa Riva": [
-            "Agua Santa del Yuna",
-            "Cristo Rey de Guaraguao",
-            "Las Taranas",
-            "Barraquito"
-        ],
+        }
 
-        "Las Guáranas": [
-            "Sabana Grande"
-        ],
 
-        "Eugenio María de Hostos": []
+        const [
 
-    },
+            provinces,
 
+            municipalities,
 
-    "Elías Piña": {
+            districts
 
-        "Comendador": [],
+        ] = await Promise.all([
 
-        "Bánica": [
-            "Sabana Cruz",
-            "Sabana Higüero"
-        ],
+            provincesResponse.json(),
 
-        "El Llano": [
-            "Guanito"
-        ],
+            municipalitiesResponse.json(),
 
-        "Hondo Valle": [
-            "Rancho de La Guardia"
-        ],
+            districtsResponse.json()
 
-        "Pedro Santana": [
-            "Río Limpio"
-        ],
+        ]);
 
-        "Juan Santiago": []
 
-    },
+        // =================================================
+        // 1. CREAR PROVINCIAS
+        // =================================================
 
+        provinces.forEach(
+            function(province) {
 
-    "El Seibo": {
+                const provinceName =
+                    normalizeProvinceName(
+                        province.nombre
+                    );
 
-        "El Seibo": [
-            "Pedro Sánchez",
-            "San Francisco-Vicentillo",
-            "Santa Lucía"
-        ],
 
-        "Miches": [
-            "El Cedro",
-            "La Gina"
-        ]
+                locations[provinceName] = {};
 
-    },
+            }
+        );
 
 
-    "Espaillat": {
+        // =================================================
+        // 2. CREAR MUNICIPIOS
+        // =================================================
 
-        "Moca": [
-            "José Contreras",
-            "Juan López",
-            "Las Lagunas",
-            "Canca la Reyna",
-            "El Higüerito",
-            "Monte de la Jagua",
-            "La Ortega"
-        ],
+        municipalities.forEach(
+            function(municipality) {
 
-        "Cayetano Germosén": [],
+                const province =
+                    provinces.find(
+                        function(item) {
 
-        "Gaspar Hernández": [
-            "Joba Arriba",
-            "Veragua",
-            "Villa Magante"
-        ],
+                            return (
+                                item.id ===
+                                municipality.provinciaId
+                            );
 
-        "Jamao Al Norte": [
-            "Jamao Afuera"
-        ],
+                        }
+                    );
 
-        "San Víctor": [
-            "Blanco"
-        ]
 
-    },
+                if (!province) {
 
+                    console.warn(
+                        "Provincia no encontrada para municipio:",
+                        municipality.nombre
+                    );
 
-    "Independencia": {
+                    return;
 
-        "Jimaní": [
-            "El Limón",
-            "Boca de Cachón"
-        ],
+                }
 
-        "Duvergé": [
-            "Vengan a Ver"
-        ],
 
-        "La Descubierta": [],
+                const provinceName =
+                    normalizeProvinceName(
+                        province.nombre
+                    );
 
-        "Postrer Río": [],
 
-        "Cristóbal": [
-            "Batey 8"
-        ],
+                const municipalityName =
+                    cleanTerritoryName(
+                        municipality.nombre
+                    );
 
-        "Mella": [
-            "La Colonia"
-        ]
 
-    },
+                if (
+                    !locations[provinceName]
+                ) {
 
+                    locations[provinceName] = {};
 
-    "La Altagracia": {
+                }
 
-        "Higüey": [
-            "Las Lagunas de Nisibón",
-            "La Otra Banda",
-            "Verón Punta Cana"
-        ],
 
-        "San Rafael del Yuma": [
-            "Boca de Yuma",
-            "Bayahíbe"
-        ]
+                locations[provinceName]
+                    [municipalityName] = [];
 
-    },
+            }
+        );
 
 
-    "La Romana": {
+        // =================================================
+        // 3. AGREGAR DISTRITOS MUNICIPALES
+        // =================================================
 
-        "La Romana": [
-            "Caleta"
-        ],
+        districts.forEach(
+            function(district) {
 
-        "Guaymate": [],
+                const municipality =
+                    municipalities.find(
+                        function(item) {
 
-        "Villa Hermosa": [
-            "Cumayasa"
-        ]
+                            return (
+                                item.id ===
+                                district.municipioId
+                            );
 
-    },
+                        }
+                    );
 
 
-    "La Vega": {
+                if (!municipality) {
 
-        "La Vega": [
-            "Río Verde Arriba",
-            "El Ranchito",
-            "Tavera",
-            "Don Juan Rodríguez"
-        ],
+                    console.warn(
+                        "Municipio no encontrado para distrito:",
+                        district.nombre
+                    );
 
-        "Constanza": [
-            "Tireo",
-            "La Sabina"
-        ],
+                    return;
 
-        "Jarabacoa": [
-            "Buena Vista",
-            "Manabao"
-        ],
+                }
 
-        "Jima Abajo": [
-            "Rincón"
-        ]
 
-    },
+                const province =
+                    provinces.find(
+                        function(item) {
 
+                            return (
+                                item.id ===
+                                municipality.provinciaId
+                            );
 
-    "María Trinidad Sánchez": {
+                        }
+                    );
 
-        "Nagua": [
-            "San José de Matanzas",
-            "Las Gordas",
-            "Arroyo al Medio"
-        ],
 
-        "Cabrera": [
-            "Arroyo Salado",
-            "La Entrada"
-        ],
+                if (!province) {
 
-        "El Factor": [
-            "El Pozo"
-        ],
+                    return;
 
-        "Río San Juan": []
+                }
 
-    },
 
+                const provinceName =
+                    normalizeProvinceName(
+                        province.nombre
+                    );
 
-    "Monte Cristi": {
 
-        "Monte Cristi": [
-            "Palo Verde"
-        ],
+                const municipalityName =
+                    cleanTerritoryName(
+                        municipality.nombre
+                    );
 
-        "Castañuelas": [],
 
-        "Guayubín": [
-            "Villa Elisa",
-            "Hatillo Palma",
-            "Cana Chapetón"
-        ],
+                const districtName =
+                    cleanTerritoryName(
+                        district.nombre
+                    );
 
-        "Las Matas de Santa Cruz": [],
 
-        "Pepillo Salcedo": [
-            "Santa María"
-        ],
+                if (
 
-        "Villa Vásquez": []
+                    locations[provinceName] &&
+                    locations[provinceName]
+                        [municipalityName]
 
-    },
+                ) {
 
+                    locations[provinceName]
+                        [municipalityName]
+                        .push(
+                            districtName
+                        );
 
-    "Pedernales": {
+                }
 
-        "Pedernales": [
-            "José Francisco Peña Gómez"
-        ],
+            }
+        );
 
-        "Oviedo": [
-            "Juancho"
-        ]
 
-    },
+        // =================================================
+        // 4. ORDENAR ALFABÉTICAMENTE
+        // =================================================
 
+        Object.keys(locations)
+            .forEach(
+                function(provinceName) {
 
-    "Peravia": {
+                    const municipalitiesData =
+                        locations[provinceName];
 
-        "Baní": [
-            "Villa Fundación",
-            "Sabana Buey",
-            "Paya",
-            "Villa Sombrero",
-            "El Carretón",
-            "Catalina",
-            "El Limonal",
-            "Las Barías"
-        ],
 
-        "Nizao": [
-            "Pizarrete",
-            "Santana"
-        ],
+                    const sortedMunicipalities =
+                        {};
 
-        "Matanzas": []
 
-    },
+                    Object.keys(
+                        municipalitiesData
+                    )
+                    .sort(
+                        function(a, b) {
 
+                            return a.localeCompare(
+                                b,
+                                "es"
+                            );
 
-    "Puerto Plata": {
+                        }
+                    )
+                    .forEach(
+                        function(municipalityName) {
 
-        "Puerto Plata": [
-            "Yásica Arriba",
-            "Maimón"
-        ],
+                            sortedMunicipalities[
+                                municipalityName
+                            ] =
+                                municipalitiesData[
+                                    municipalityName
+                                ]
+                                .sort(
+                                    function(a, b) {
 
-        "Altamira": [
-            "Río Grande"
-        ],
+                                        return a.localeCompare(
+                                            b,
+                                            "es"
+                                        );
 
-        "Guananico": [],
+                                    }
+                                );
 
-        "Imbert": [],
+                        }
+                    );
 
-        "Los Hidalgos": [
-            "Navas"
-        ],
 
-        "Luperón": [
-            "La Isabela",
-            "Belloso",
-            "El Estrecho de Luperón Omar Bross"
-        ],
+                    locations[provinceName] =
+                        sortedMunicipalities;
 
-        "Sosúa": [
-            "Cabarete",
-            "Sabaneta de Yásica"
-        ],
+                }
+            );
 
-        "Villa Isabela": [
-            "Estero Hondo",
-            "La Jaiba",
-            "Gualete"
-        ],
 
-        "Villa Montellano": []
+        console.log(
+            "División territorial cargada correctamente."
+        );
 
-    },
 
+        console.log(
+            "Provincias:",
+            Object.keys(locations).length
+        );
 
-    "Hermanas Mirabal": {
 
-        "Salcedo": [],
+        // Avisar al resto de la aplicación
+        document.dispatchEvent(
+            new Event(
+                "locationsReady"
+            )
+        );
 
-        "Tenares": [
-            "Blanco"
-        ],
 
-        "Villa Tapia": []
+    } catch (error) {
 
-    },
+        console.error(
+            "Error cargando división territorial:",
+            error
+        );
 
 
-    "Samaná": {
-
-        "Samaná": [
-            "El Limón",
-            "Arroyo Barril",
-            "Las Galeras"
-        ],
-
-        "Sánchez": [],
-
-        "Las Terrenas": []
-
-    },
-
-
-    "San Cristóbal": {
-
-        "San Cristóbal": [
-            "Hato Damas",
-            "Hatillo"
-        ],
-
-        "Sabana Grande de Palenque": [],
-
-        "Bajos de Haina": [
-            "El Carril",
-            "Quita Sueño"
-        ],
-
-        "Cambita Garabitos": [
-            "Cambita El Pueblecito"
-        ],
-
-        "Villa Altagracia": [
-            "San José del Puerto",
-            "Medina",
-            "La Cuchilla"
-        ],
-
-        "Yaguate": [
-            "Doña Ana"
-        ],
-
-        "San Gregorio de Nigua": [],
-
-        "Los Cacaos": []
-
-    },
-
-
-    "San Juan": {
-
-        "San Juan": [
-            "Pedro Corto",
-            "Sabaneta",
-            "Sabana Alta",
-            "El Rosario",
-            "Hato del Padre",
-            "Guanito",
-            "La Jagua",
-            "Las Maguanas-Hato Nuevo",
-            "Las Charcas de María Nova",
-            "Las Zanjas"
-        ],
-
-        "Bohechío": [
-            "Arroyo Cano",
-            "Yaque"
-        ],
-
-        "El Cercado": [
-            "Derrumbadero",
-            "Batista"
-        ],
-
-        "Juan de Herrera": [
-            "Jínova"
-        ],
-
-        "Las Matas de Farfán": [
-            "Matayaya",
-            "Carrera de Yeguas"
-        ],
-
-        "Vallejuelo": [
-            "Jorjillo"
-        ]
-
-    },
-
-
-    "San Pedro de Macorís": {
-
-        "San Pedro de Macorís": [],
-
-        "Los Llanos": [
-            "El Puerto",
-            "Gautier"
-        ],
-
-        "Ramón Santana": [],
-
-        "Consuelo": [],
-
-        "Quisqueya": [],
-
-        "Guayacanes": []
-
-    },
-
-
-    "Sánchez Ramírez": {
-
-        "Cotuí": [
-            "Quita Sueño",
-            "Caballero",
-            "Comedero Arriba",
-            "Platanal",
-            "Zambrana Abajo"
-        ],
-
-        "Cevicos": [
-            "La Cueva"
-        ],
-
-        "Fantino": [],
-
-        "Villa La Mata": [
-            "La Bija",
-            "Angelina",
-            "Hernando Alonzo"
-        ]
-
-    },
-
-
-    "Santiago": {
-
-        "Santiago": [
-            "Pedro García",
-            "La Canela",
-            "San Francisco de Jacagua",
-            "Hato del Yaque",
-            "Santiago Oeste"
-        ],
-
-        "Bisonó": [],
-
-        "Jánico": [
-            "Juncalito",
-            "El Caimito"
-        ],
-
-        "Licey al Medio": [
-            "Las Palomas"
-        ],
-
-        "San José de Las Matas": [
-            "El Rubio",
-            "La Cuesta",
-            "Las Placetas"
-        ],
-
-        "Tamboril": [
-            "Canca La Piedra"
-        ],
-
-        "Villa González": [
-            "Palmar Arriba",
-            "El Limón"
-        ],
-
-        "Puñal": [
-            "Guayabal",
-            "Canabacoa"
-        ],
-
-        "Sabana Iglesia": [],
-
-        "Baitoa": []
-
-    },
-
-
-    "Santiago Rodríguez": {
-
-        "San Ignacio de Sabaneta": [
-            "Ámina"
-        ],
-
-        "Villa Los Almácigos": [
-            "Maizal",
-            "Jicomé",
-            "Boca de Mao",
-            "Paradero"
-        ],
-
-        "Monción": [
-            "Jaibón",
-            "La Caya",
-            "Cruce de Guayacanes"
-        ]
-
-    },
-
-
-    "Valverde": {
-
-        "Mao": [
-            "Ámina",
-            "Jaibón o Pueblo Nuevo",
-            "Guatapanal"
-        ],
-
-        "Esperanza": [
-            "Maizal",
-            "Jicomé",
-            "Boca de Mao",
-            "Paradero"
-        ],
-
-        "Laguna Salada": [
-            "Jaibón",
-            "La Caya",
-            "Cruce de Guayacanes"
-        ]
-
-    },
-
-
-    "Monseñor Nouel": {
-
-        "Bonao": [
-            "Sabana del Puerto",
-            "Juma Bejucal",
-            "Arroyo Toro - Masipedro",
-            "Jayaco",
-            "La Salvia - Los Quemados"
-        ],
-
-        "Maimón": [],
-
-        "Piedra Blanca": [
-            "Villa de Sonador",
-            "Juan Adrián"
-        ]
-
-    },
-
-
-    "Monte Plata": {
-
-        "Monte Plata": [
-            "Don Juan",
-            "Chirino",
-            "Boyá"
-        ],
-
-        "Bayaguana": [],
-
-        "Sabana Grande de Boyá": [
-            "Gonzalo",
-            "Majagual"
-        ],
-
-        "Yamasá": [
-            "Los Botados",
-            "Mamá Tingó"
-        ],
-
-        "Peralvillo": []
-
-    },
-
-
-    "Hato Mayor": {
-
-        "Hato Mayor": [
-            "Yerba Buena",
-            "Mata Palacio",
-            "Guayabo Dulce"
-        ],
-
-        "Sabana de La Mar": [
-            "Elupina Cordero de Las Cañitas"
-        ],
-
-        "El Valle": []
-
-    },
-
-
-    "San José de Ocoa": {
-
-        "San José de Ocoa": [
-            "La Ciénaga",
-            "Nizao - Las Auyamas",
-            "El Pinar",
-            "El Naranjal"
-        ],
-
-        "Sabana Larga": [],
-
-        "Rancho Arriba": []
-
-    },
-
-
-    "Santo Domingo": {
-
-        "Santo Domingo Este": [
-            "San Luis"
-        ],
-
-        "Santo Domingo Oeste": [],
-
-        "Santo Domingo Norte": [
-            "La Victoria"
-        ],
-
-        "Boca Chica": [
-            "La Caleta"
-        ],
-
-        "San Antonio de Guerra": [
-            "Hato Viejo"
-        ],
-
-        "Los Alcarrizos": [
-            "Palmarejo-Villa Linda",
-            "Pantoja"
-        ],
-
-        "Pedro Brand": [
-            "La Guáyiga",
-            "La Cuaba"
-        ]
+        alert(
+            "No se pudo cargar la división territorial. Revisa tu conexión a Internet."
+        );
 
     }
 
-};
+}
+
+
+// =======================================================
+// INICIAR CARGA
+// =======================================================
+
+loadLocations();

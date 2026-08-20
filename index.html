@@ -754,6 +754,65 @@
 
     </style>
 
+
+
+<style>
+/* Campo de precio: sin flechas */
+input[type="number"].price-input::-webkit-outer-spin-button,
+input[type="number"].price-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type="number"].price-input {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Resultados de búsqueda */
+.location-search {
+    position: relative;
+}
+
+.location-results {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 2000;
+    max-height: 300px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #dfe6df;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.12);
+}
+
+.location-result {
+    display: block;
+    width: 100%;
+    padding: 11px 13px;
+    border: 0;
+    border-bottom: 1px solid #edf1ed;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.location-result:hover {
+    background: #f4f8f4;
+}
+
+.location-result strong {
+    display: block;
+}
+
+.location-result small {
+    display: block;
+    margin-top: 2px;
+    color: #68736b;
+}
+</style>
+
 </head>
 
 
@@ -1350,11 +1409,8 @@
 
                 <input
                     id="reportPrice"
-                    type="number"
-                    min="1"
-                    step="1"
                     placeholder="Ej. 190"
-                    required>
+                    required class="price-input price-input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
 
             </div>
 
@@ -4571,6 +4627,180 @@
 
 
 
+
+
+
+<script>
+/* =========================================================
+   PRECIO CERDO RD — CORRECCIÓN DEL ÍNDICE DE BÚSQUEDA
+   locations.js usa:
+   locations[provincia][municipio].districts
+   ========================================================= */
+(function () {
+
+    function refreshSearchNow() {
+
+        if (
+            typeof refreshLocationSearchIndex === "function"
+        ) {
+            refreshLocationSearchIndex();
+
+            console.log(
+                "🔎 Índice territorial de búsqueda actualizado."
+            );
+        }
+
+    }
+
+    /*
+     * locations.js dispara este evento cuando terminó
+     * de cargar toda la división territorial.
+     */
+    document.addEventListener(
+        "locationsReady",
+        function () {
+            refreshSearchNow();
+        },
+        { once: true }
+    );
+
+    /*
+     * También intentamos al cargar la página por si
+     * locations.js ya había terminado antes de registrar
+     * el listener.
+     */
+    window.addEventListener(
+        "load",
+        function () {
+
+            setTimeout(
+                refreshSearchNow,
+                300
+            );
+
+        }
+    );
+
+})();
+</script>
+
+
+<script>
+/* =========================================================
+   PRECIO CERDO RD — CAMPO DE PRECIO
+   Solo números. Sin flechas.
+   ========================================================= */
+(function () {
+
+    function setupReportPrice() {
+
+        const input =
+            document.getElementById(
+                "reportPrice"
+            );
+
+        if (
+            !input ||
+            input.dataset.priceReady === "1"
+        ) {
+            return;
+        }
+
+        input.dataset.priceReady = "1";
+
+        input.addEventListener(
+            "input",
+            function () {
+
+                this.value =
+                    this.value.replace(
+                        /[^0-9]/g,
+                        ""
+                    );
+
+            }
+        );
+
+        input.addEventListener(
+            "keydown",
+            function (event) {
+
+                const allowedKeys = [
+                    "Backspace",
+                    "Delete",
+                    "ArrowLeft",
+                    "ArrowRight",
+                    "Home",
+                    "End",
+                    "Tab"
+                ];
+
+                if (
+                    allowedKeys.includes(
+                        event.key
+                    )
+                ) {
+                    return;
+                }
+
+                if (
+                    event.ctrlKey ||
+                    event.metaKey
+                ) {
+                    return;
+                }
+
+                if (
+                    !/^[0-9]$/.test(
+                        event.key
+                    )
+                ) {
+                    event.preventDefault();
+                }
+
+            }
+        );
+
+        input.addEventListener(
+            "paste",
+            function (event) {
+
+                event.preventDefault();
+
+                const text =
+                    (
+                        event.clipboardData ||
+                        window.clipboardData
+                    )
+                    .getData("text")
+                    .replace(
+                        /[^0-9]/g,
+                        ""
+                    );
+
+                document.execCommand(
+                    "insertText",
+                    false,
+                    text
+                );
+
+            }
+        );
+
+    }
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        setupReportPrice
+    );
+
+    window.addEventListener(
+        "load",
+        setupReportPrice
+    );
+
+})();
+</script>
 
 </body>
 

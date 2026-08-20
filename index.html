@@ -2561,14 +2561,15 @@ input[type="number"].price-input {
 
         async function reverseGeocode(latitude, longitude) {
 
+            console.log(
+                "🌎 Consultando municipio con BigDataCloud..."
+            );
+
             const url =
-                "https://nominatim.openstreetmap.org/reverse" +
-                "?format=jsonv2" +
-                "&lat=" + encodeURIComponent(latitude) +
-                "&lon=" + encodeURIComponent(longitude) +
-                "&zoom=18" +
-                "&addressdetails=1" +
-                "&accept-language=es";
+                "https://api.bigdatacloud.net/data/reverse-geocode-client" +
+                "?latitude=" + encodeURIComponent(latitude) +
+                "&longitude=" + encodeURIComponent(longitude) +
+                "&localityLanguage=es";
 
             const response =
                 await fetch(url, {
@@ -2580,11 +2581,226 @@ input[type="number"].price-input {
 
             if (!response.ok) {
                 throw new Error(
-                    "No se pudo consultar la dirección de la ubicación."
+                    "El servicio de ubicación respondió con HTTP " +
+                    response.status
                 );
             }
 
-            return await response.json();
+            const data =
+                await response.json();
+
+            console.log(
+                "🌎 Respuesta de geocodificación:",
+                data
+            );
+
+            return data;
+
+        }
+
+
+        function buildGeolocationAddress(data) {
+
+            const values = [];
+
+            function add(value) {
+
+                if (!value) {
+                    return;
+                }
+
+                if (Array.isArray(value)) {
+
+                    value.forEach(add);
+                    return;
+
+                }
+
+                if (typeof value === "object") {
+
+                    Object.values(value).forEach(add);
+                    return;
+
+                }
+
+                values.push(String(value));
+
+            }
+
+            add(data.city);
+            add(data.locality);
+            add(data.principalSubdivision);
+            add(data.postcode);
+            add(data.countryName);
+
+            if (data.localityInfo) {
+                add(data.localityInfo.administrative);
+                add(data.localityInfo.informative);
+            }
+
+            return values
+                .map(normalizeGeoText)
+                .filter(Boolean)
+                .join(" | ");
+
+        }
+
+
+        function findTerritoryFromGeolocation(data) {
+
+            const territory =
+                getTerritorialSearchData();
+
+            if (!territory.length) {
+
+                console.error(
+                    "❌ locations.js no tiene territorios disponibles."
+                );
+
+                return null;
+
+            }
+
+            const normalizedAddress =
+                buildGeolocationAddress(data);
+
+            console.log(
+                "🔎 Texto territorial para comparar:",
+                normalizedAddress
+            );
+
+            const city =
+                normalizeGeoText(
+                    data.city
+                );
+
+            const locality =
+                normalizeGeoText(
+                    data.locality
+                );
+
+            const province =
+                normalizeGeoText(
+                    data.principalSubdivision
+                );
+
+            /*
+             * 1. Coincidencia exacta municipio + provincia.
+             */
+            let match =
+                territory.find(
+                    function(item) {
+
+                        const municipality =
+                            normalizeGeoText(
+                                item.municipality
+                            );
+
+                        const itemProvince =
+                            normalizeGeoText(
+                                item.province
+                            );
+
+                        return (
+                            municipality &&
+                            itemProvince &&
+                            (
+                                city === municipality ||
+                                locality === municipality
+                            ) &&
+                            (
+                                province === itemProvince ||
+                                normalizedAddress.includes(
+                                    itemProvince
+                                )
+                            )
+                        );
+
+                    }
+                );
+
+            if (match) {
+                console.log(
+                    "✅ Municipio encontrado:",
+                    match
+                );
+                return match;
+            }
+
+
+            /*
+             * 2. Municipio encontrado dentro de todos los
+             * nombres devueltos por el servicio.
+             */
+            match =
+                territory.find(
+                    function(item) {
+
+                        const municipality =
+                            normalizeGeoText(
+                                item.municipality
+                            );
+
+                        return (
+                            municipality &&
+                            normalizedAddress.includes(
+                                municipality
+                            )
+                        );
+
+                    }
+                );
+
+            if (match) {
+                console.log(
+                    "✅ Municipio encontrado por coincidencia territorial:",
+                    match
+                );
+                return match;
+            }
+
+
+            /*
+             * 3. Intentamos identificar directamente una zona.
+             */
+            match =
+                territory.find(
+                    function(item) {
+
+                        const district =
+                            normalizeGeoText(
+                                item.district
+                            );
+
+                        return (
+                            district &&
+                            normalizedAddress.includes(
+                                district
+                            )
+                        );
+
+                    }
+                );
+
+            if (match) {
+                console.log(
+                    "✅ Zona encontrada:",
+                    match
+                );
+                return match;
+            }
+
+
+            console.warn(
+                "⚠️ No se encontró coincidencia en locations.js.",
+                {
+                    ciudad: data.city,
+                    localidad: data.locality,
+                    provincia: data.principalSubdivision
+                }
+            );
+
+            return null;
 
         }
 
@@ -2628,6 +2844,11 @@ input[type="number"].price-input {
             return true;
 
         }
+
+
+        console.log(
+            "📍 Sistema de geolocalización cargado correctamente."
+        );
 
 
         function useMyLocation() {
@@ -2689,13 +2910,13 @@ input[type="number"].price-input {
                             );
 
                         console.log(
-                            "📍 Dirección detectada:",
-                            data.address
+                            "📍 Datos de ubicación recibidos:",
+                            data
                         );
 
                         const territory =
-                            findTerritoryFromAddress(
-                                data.address || {}
+                            findTerritoryFromGeolocation(
+                                data
                             );
 
                         if (!territory) {
@@ -2799,9 +3020,8 @@ input[type="number"].price-input {
                 {
                     enableHighAccuracy: true,
                     timeout: 15000,
-                    maximumAge: 300000
+                    maximumAge: 0
                 }
-
             );
 
         }

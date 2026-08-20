@@ -1,11 +1,18 @@
 /*
 =========================================================
  PRECIO CERDO RD
- Estructura territorial:
- Provincia → Municipio → Distrito municipal
+ DIVISIÓN TERRITORIAL DE REPÚBLICA DOMINICANA
 
- Fuente territorial:
- División Territorial de la ONE / Datos-Rep-Dom
+ Estructura:
+
+ Provincia
+    ↓
+ Municipio
+    ↓
+ Distrito municipal
+
+ La relación de los distritos se realiza mediante
+ municipioId.
 =========================================================
 */
 
@@ -14,7 +21,7 @@ const locations = {};
 
 
 // =======================================================
-// FUENTES DE DATOS TERRITORIALES
+// FUENTES
 // =======================================================
 
 const TERRITORY_SOURCES = {
@@ -32,7 +39,7 @@ const TERRITORY_SOURCES = {
 
 
 // =======================================================
-// NORMALIZAR NOMBRES
+// LIMPIAR NOMBRES
 // =======================================================
 
 function cleanTerritoryName(name) {
@@ -41,23 +48,19 @@ function cleanTerritoryName(name) {
         return "";
     }
 
-
     return name
 
-        // Eliminar indicador de distrito municipal
         .replace(/\s*\(DM\)\s*$/i, "")
 
-        // Espacios repetidos
         .replace(/\s+/g, " ")
 
-        // Espacios al inicio/final
         .trim();
 
 }
 
 
 // =======================================================
-// CORRECCIONES DE NOMBRES
+// NORMALIZAR PROVINCIAS
 // =======================================================
 
 function normalizeProvinceName(name) {
@@ -77,14 +80,16 @@ function normalizeProvinceName(name) {
     };
 
 
-    return corrections[cleaned]
-        || cleaned;
+    return (
+        corrections[cleaned]
+        || cleaned
+    );
 
 }
 
 
 // =======================================================
-// CARGAR ESTRUCTURA TERRITORIAL
+// CARGAR DIVISIÓN TERRITORIAL
 // =======================================================
 
 async function loadLocations() {
@@ -92,7 +97,7 @@ async function loadLocations() {
     try {
 
         console.log(
-            "Cargando división territorial..."
+            "🌎 Cargando división territorial..."
         );
 
 
@@ -130,7 +135,7 @@ async function loadLocations() {
         ) {
 
             throw new Error(
-                "No se pudieron cargar los datos territoriales."
+                "No se pudieron descargar los datos territoriales."
             );
 
         }
@@ -156,7 +161,7 @@ async function loadLocations() {
 
 
         // =================================================
-        // 1. CREAR PROVINCIAS
+        // PROVINCIAS
         // =================================================
 
         provinces.forEach(
@@ -175,11 +180,31 @@ async function loadLocations() {
 
 
         // =================================================
-        // 2. CREAR MUNICIPIOS
+        // MUNICIPIOS
+        //
+        // IMPORTANTE:
+        //
+        // municipios.json NO trae "id".
+        //
+        // El ID corresponde a la posición
+        // consecutiva del municipio.
+        //
+        // Por eso:
+        //
+        // index 0 → ID 1
+        // index 1 → ID 2
+        // index 2 → ID 3
+        //
+        // Esto permite relacionarlo con
+        // distrito.municipioId.
         // =================================================
 
         municipalities.forEach(
-            function(municipality) {
+            function(municipality, index) {
+
+                const municipalityId =
+                    index + 1;
+
 
                 const province =
                     provinces.find(
@@ -197,7 +222,7 @@ async function loadLocations() {
                 if (!province) {
 
                     console.warn(
-                        "Provincia no encontrada para municipio:",
+                        "⚠️ Provincia no encontrada para municipio:",
                         municipality.nombre
                     );
 
@@ -228,37 +253,42 @@ async function loadLocations() {
 
 
                 locations[provinceName]
-                    [municipalityName] = [];
+                    [municipalityName] = {
+
+                        id:
+                            municipalityId,
+
+                        districts: []
+
+                    };
 
             }
         );
 
 
         // =================================================
-        // 3. AGREGAR DISTRITOS MUNICIPALES
+        // DISTRITOS MUNICIPALES
         // =================================================
+
+        let districtsAdded = 0;
+
 
         districts.forEach(
             function(district) {
 
                 const municipality =
-                    municipalities.find(
-                        function(item) {
-
-                            return (
-                                item.id ===
-                                district.municipioId
-                            );
-
-                        }
-                    );
+                    municipalities[
+                        district.municipioId - 1
+                    ];
 
 
                 if (!municipality) {
 
                     console.warn(
-                        "Municipio no encontrado para distrito:",
-                        district.nombre
+                        "⚠️ Municipio no encontrado para distrito:",
+                        district.nombre,
+                        "municipioId:",
+                        district.municipioId
                     );
 
                     return;
@@ -304,36 +334,52 @@ async function loadLocations() {
                     );
 
 
-                if (
+                const municipalityData =
+                    locations
+                        [provinceName]
+                        ?.[
+                            municipalityName
+                        ];
 
-                    locations[provinceName] &&
-                    locations[provinceName]
-                        [municipalityName]
 
-                ) {
+                if (!municipalityData) {
 
-                    locations[provinceName]
-                        [municipalityName]
-                        .push(
-                            districtName
-                        );
+                    console.warn(
+                        "⚠️ No se encontró estructura para:",
+                        provinceName,
+                        municipalityName
+                    );
+
+                    return;
 
                 }
+
+
+                municipalityData
+                    .districts
+                    .push(
+                        districtName
+                    );
+
+
+                districtsAdded++;
 
             }
         );
 
 
         // =================================================
-        // 4. ORDENAR ALFABÉTICAMENTE
+        // ORDENAR MUNICIPIOS Y DISTRITOS
         // =================================================
 
         Object.keys(locations)
             .forEach(
                 function(provinceName) {
 
-                    const municipalitiesData =
-                        locations[provinceName];
+                    const provinceData =
+                        locations[
+                            provinceName
+                        ];
 
 
                     const sortedMunicipalities =
@@ -341,7 +387,7 @@ async function loadLocations() {
 
 
                     Object.keys(
-                        municipalitiesData
+                        provinceData
                     )
                     .sort(
                         function(a, b) {
@@ -356,12 +402,14 @@ async function loadLocations() {
                     .forEach(
                         function(municipalityName) {
 
-                            sortedMunicipalities[
-                                municipalityName
-                            ] =
-                                municipalitiesData[
+                            const municipalityData =
+                                provinceData[
                                     municipalityName
-                                ]
+                                ];
+
+
+                            municipalityData
+                                .districts
                                 .sort(
                                     function(a, b) {
 
@@ -373,29 +421,57 @@ async function loadLocations() {
                                     }
                                 );
 
+
+                            sortedMunicipalities[
+                                municipalityName
+                            ] =
+                                municipalityData;
+
                         }
                     );
 
 
-                    locations[provinceName] =
+                    locations[
+                        provinceName
+                    ] =
                         sortedMunicipalities;
 
                 }
             );
 
 
+        // =================================================
+        // RESULTADO
+        // =================================================
+
+        window.locationsReady =
+            true;
+
+
         console.log(
-            "División territorial cargada correctamente."
+            "✅ División territorial cargada correctamente."
         );
 
 
         console.log(
-            "Provincias:",
+            "📍 Provincias:",
             Object.keys(locations).length
         );
 
 
-        // Avisar al resto de la aplicación
+        console.log(
+            "🏘️ Municipios:",
+            municipalities.length
+        );
+
+
+        console.log(
+            "🗺️ Distritos municipales cargados:",
+            districtsAdded
+        );
+
+
+        // Avisar a la aplicación
         document.dispatchEvent(
             new Event(
                 "locationsReady"
@@ -406,13 +482,17 @@ async function loadLocations() {
     } catch (error) {
 
         console.error(
-            "Error cargando división territorial:",
+            "❌ Error cargando división territorial:",
             error
         );
 
 
+        window.locationsReady =
+            false;
+
+
         alert(
-            "No se pudo cargar la división territorial. Revisa tu conexión a Internet."
+            "No se pudo cargar la división territorial."
         );
 
     }
@@ -421,7 +501,7 @@ async function loadLocations() {
 
 
 // =======================================================
-// INICIAR CARGA
+// INICIAR
 // =======================================================
 
 loadLocations();

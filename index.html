@@ -591,6 +591,90 @@
             font-size: 12px;
         }
 
+
+        .location-search {
+            position: relative;
+            margin-bottom: 14px;
+        }
+
+        .location-search input {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1px solid #d8dfda;
+            border-radius: 10px;
+            outline: none;
+            background: white;
+        }
+
+        .location-search input:focus {
+            border-color: #22c55e;
+        }
+
+        .location-results {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% + 5px);
+            z-index: 50;
+            background: white;
+            border: 1px solid #dfe5e0;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.12);
+            max-height: 280px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .location-result {
+            width: 100%;
+            border: 0;
+            border-bottom: 1px solid #edf1ee;
+            background: white;
+            text-align: left;
+            padding: 12px 14px;
+            cursor: pointer;
+        }
+
+        .location-result:hover {
+            background: #f0fdf4;
+        }
+
+        .location-result strong {
+            display: block;
+            color: #14532d;
+            margin-bottom: 3px;
+        }
+
+        .location-result small {
+            color: #717a73;
+        }
+
+        .validation-box {
+            margin-top: 14px;
+            padding: 13px 14px;
+            border-radius: 10px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #7c2d12;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .report-summary {
+            margin-top: 14px;
+            padding: 14px;
+            border-radius: 10px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #36533f;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .report-summary strong {
+            color: #14532d;
+        }
+
         /* =========================
            CELULAR
         ========================= */
@@ -816,6 +900,23 @@
         el municipio o zona donde compras o vendes.
 
     </p>
+
+
+    <div class="location-search">
+
+        <input
+            id="locationSearch"
+            type="search"
+            autocomplete="off"
+            placeholder="🔎 Busca un municipio o zona, por ejemplo: Fantino, Manabao..."
+            oninput="searchMainLocation()">
+
+        <div
+            class="location-results"
+            id="locationSearchResults">
+        </div>
+
+    </div>
 
 
     <div class="location-fields">
@@ -1159,6 +1260,23 @@
         <form onsubmit="submitReport(event)">
 
 
+
+            <div class="location-search">
+
+                <input
+                    id="reportLocationSearch"
+                    type="search"
+                    autocomplete="off"
+                    placeholder="🔎 Busca municipio o zona, por ejemplo: Fantino..."
+                    oninput="searchReportLocation()">
+
+                <div
+                    class="location-results"
+                    id="reportLocationSearchResults">
+                </div>
+
+            </div>
+
             <div class="form-group">
 
                 <label>
@@ -1268,6 +1386,10 @@
 
 
 
+            <div id="reportValidation"></div>
+
+            <div id="reportSummary"></div>
+
             <button
                 class="submit-button"
                 type="submit">
@@ -1305,6 +1427,8 @@
             collection,
             addDoc,
             getDocs,
+            doc,
+            updateDoc,
             serverTimestamp
         } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
@@ -2047,11 +2171,18 @@
                 const reports = [];
 
 
+                window.currentReports = [];
+
                 snapshot.forEach(
                     function(doc) {
 
                         const data =
                             doc.data();
+
+                        window.currentReports.push({
+                            id: doc.id,
+                            ...data
+                        });
 
 
                         if (
@@ -2279,6 +2410,26 @@
 
 
             setTodayDate();
+
+            const search =
+                document.getElementById(
+                    "reportLocationSearch"
+                );
+
+            if (search) {
+                search.value = "";
+            }
+
+            const results =
+                document.getElementById(
+                    "reportLocationSearchResults"
+                );
+
+            if (results) {
+                results.style.display = "none";
+            }
+
+            updateReportSummary();
 
         }
 
@@ -2509,6 +2660,132 @@
         // ENVIAR REPORTE
         // =================================================
 
+        // =================================================
+        // IDENTIFICADOR ANÓNIMO DEL DISPOSITIVO
+        // =================================================
+
+        function getReporterId() {
+
+            const key =
+                "precioCerdoRD_reporterId";
+
+            let id =
+                localStorage.getItem(key);
+
+            if (!id) {
+
+                id =
+                    "r_" +
+                    crypto.randomUUID();
+
+                localStorage.setItem(
+                    key,
+                    id
+                );
+            }
+
+            return id;
+        }
+
+
+        // =================================================
+        // UTILIDADES DE REPORTES
+        // =================================================
+
+        function normalizeText(value) {
+
+            return String(
+                value || ""
+            )
+            .trim()
+            .toLowerCase();
+
+        }
+
+
+        function isSameReportLocation(
+            report,
+            province,
+            municipality,
+            district
+        ) {
+
+            return (
+                normalizeText(
+                    report.provincia
+                ) ===
+                normalizeText(
+                    province
+                )
+                &&
+                normalizeText(
+                    report.municipio
+                ) ===
+                normalizeText(
+                    municipality
+                )
+                &&
+                normalizeText(
+                    report.distrito
+                ) ===
+                normalizeText(
+                    district || ""
+                )
+            );
+
+        }
+
+
+        function isSameDate(
+            report,
+            date
+        ) {
+
+            return (
+                String(
+                    report.fecha || ""
+                ) ===
+                String(date)
+            );
+
+        }
+
+
+        function getRecentReferenceForReport(
+            reports
+        ) {
+
+            const prices =
+                reports
+                    .map(
+                        report =>
+                            Number(
+                                report.precio
+                            )
+                    )
+                    .filter(
+                        price =>
+                            Number.isFinite(
+                                price
+                            ) &&
+                            price > 0
+                    );
+
+            if (!prices.length) {
+                return null;
+            }
+
+            return getReferenceFromReports(
+                reports
+            );
+
+        }
+
+
+        // =================================================
+        // ENVIAR REPORTE
+        // =================================================
+
         async function submitReport(event) {
 
             event.preventDefault();
@@ -2552,10 +2829,30 @@
                 );
 
 
-            // La fecha se genera en el momento
-            // del envío y el usuario no puede cambiarla.
             const date =
                 getTodayString();
+
+
+            const validationBox =
+                document.getElementById(
+                    "reportValidation"
+                );
+
+
+            const summary =
+                document.getElementById(
+                    "reportSummary"
+                );
+
+
+            if (validationBox) {
+                validationBox.innerHTML = "";
+            }
+
+
+            if (summary) {
+                summary.innerHTML = "";
+            }
 
 
             if (!province) {
@@ -2594,7 +2891,318 @@
             }
 
 
+            /*
+            =================================================
+            VALIDACIÓN BÁSICA DE PRECIO
+            =================================================
+
+            No bloqueamos automáticamente un precio extraño.
+            Primero advertimos.
+
+            Rango técnico amplio para evitar errores
+            evidentes como 1 o 5000 pesos/kg.
+            */
+
+            if (
+                price < 80 ||
+                price > 500
+            ) {
+
+                const confirmed =
+                    confirm(
+                        "⚠️ El precio que introdujiste está fuera del rango habitual de la plataforma.\n\n" +
+                        "Precio: RD$" +
+                        price +
+                        "/kg\n\n" +
+                        "Si estás seguro de que este es el precio real de tu zona, puedes continuar.\n\n" +
+                        "¿Confirmar reporte?"
+                    );
+
+                if (!confirmed) {
+                    return;
+                }
+
+            }
+
+
             try {
+
+                /*
+                =================================================
+                CARGAR REPORTES ACTUALES
+                =================================================
+                */
+
+                const snapshot =
+                    await getDocs(
+                        collection(
+                            db,
+                            "reports"
+                        )
+                    );
+
+
+                const reports =
+                    [];
+
+
+                snapshot.forEach(
+                    function(documentSnapshot) {
+
+                        reports.push({
+
+                            id:
+                                documentSnapshot.id,
+
+                            ...documentSnapshot.data()
+
+                        });
+
+                    }
+                );
+
+
+                const reporterId =
+                    getReporterId();
+
+
+                /*
+                =================================================
+                MISMO DISPOSITIVO + MISMA ZONA + MISMO DÍA
+                =================================================
+                */
+
+                const previousReport =
+                    reports.find(
+                        function(report) {
+
+                            return (
+                                report.reporterId ===
+                                reporterId
+                                &&
+                                isSameReportLocation(
+                                    report,
+                                    province,
+                                    municipality,
+                                    district
+                                )
+                                &&
+                                isSameDate(
+                                    report,
+                                    date
+                                )
+                            );
+
+                        }
+                    );
+
+
+                /*
+                =================================================
+                SI YA EXISTE UN REPORTE DEL MISMO DISPOSITIVO
+                =================================================
+                */
+
+                if (previousReport) {
+
+                    const oldPrice =
+                        Number(
+                            previousReport.precio
+                        );
+
+
+                    /*
+                    MISMO PRECIO:
+                    no creamos otro documento.
+                    */
+
+                    if (
+                        oldPrice ===
+                        price
+                    ) {
+
+                        alert(
+                            "⚠️ Ya realizaste este mismo reporte hoy.\n\n" +
+                            "Zona: " +
+                            (
+                                district ||
+                                municipality
+                            ) +
+                            "\nPrecio: RD$" +
+                            price +
+                            "/kg\n\n" +
+                            "Otros porcicultores sí pueden reportar exactamente el mismo precio."
+                        );
+
+                        return;
+
+                    }
+
+
+                    /*
+                    PRECIO DIFERENTE:
+                    ofrecemos actualizar.
+                    */
+
+                    const updateConfirmed =
+                        confirm(
+                            "🔄 Ya tienes un reporte para esta zona hoy.\n\n" +
+                            "Precio anterior: RD$" +
+                            oldPrice +
+                            "/kg\n" +
+                            "Nuevo precio: RD$" +
+                            price +
+                            "/kg\n\n" +
+                            "¿Quieres actualizar tu reporte?"
+                        );
+
+
+                    if (!updateConfirmed) {
+                        return;
+                    }
+
+
+                    await updateDoc(
+
+                        doc(
+                            db,
+                            "reports",
+                            previousReport.id
+                        ),
+
+                        {
+
+                            precio:
+                                price,
+
+                            fecha:
+                                date,
+
+                            actualizadoEn:
+                                serverTimestamp()
+
+                        }
+
+                    );
+
+
+                    alert(
+                        "✅ Tu reporte fue actualizado correctamente.\n\n" +
+                        "Zona: " +
+                        (
+                            district ||
+                            municipality
+                        ) +
+                        "\nNuevo precio: RD$" +
+                        price +
+                        "/kg"
+                    );
+
+
+                    closeModal();
+
+                    form.reset();
+
+                    resetReportSelectors();
+
+                    setTodayDate();
+
+                    await loadAndRenderPrices();
+
+                    return;
+
+                }
+
+
+                /*
+                =================================================
+                COMPARAR CON REPORTES RECIENTES DE LA ZONA
+                =================================================
+                */
+
+                const todayReports =
+                    reports.filter(
+                        function(report) {
+
+                            return (
+                                isSameReportLocation(
+                                    report,
+                                    province,
+                                    municipality,
+                                    district
+                                )
+                                &&
+                                report.fecha
+                            );
+
+                        }
+                    );
+
+
+                const reference =
+                    getRecentReferenceForReport(
+                        todayReports
+                    );
+
+
+                /*
+                Si existe una referencia y el nuevo precio
+                se aleja bastante, mostramos advertencia.
+                */
+
+                if (
+                    reference &&
+                    reference.price
+                ) {
+
+                    const difference =
+                        Math.abs(
+                            price -
+                            reference.price
+                        );
+
+
+                    const percentage =
+                        (
+                            difference /
+                            reference.price
+                        ) * 100;
+
+
+                    if (
+                        percentage >= 20
+                    ) {
+
+                        const confirmed =
+                            confirm(
+                                "⚠️ Este precio es considerablemente diferente de la referencia reciente de esta zona.\n\n" +
+                                "Referencia: RD$" +
+                                Math.round(
+                                    reference.price
+                                ) +
+                                "/kg\n" +
+                                "Tu reporte: RD$" +
+                                price +
+                                "/kg\n\n" +
+                                "Esto no significa que esté incorrecto. El mercado puede cambiar.\n\n" +
+                                "¿Confirmas que este es el precio real?"
+                            );
+
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+                    }
+
+                }
+
+
+                /*
+                =================================================
+                GUARDAR NUEVO REPORTE
+                =================================================
+                */
 
                 await addDoc(
 
@@ -2621,7 +3229,10 @@
                             date,
 
                         creadoEn:
-                            serverTimestamp()
+                            serverTimestamp(),
+
+                        reporterId:
+                            reporterId
 
                     }
 
@@ -2649,34 +3260,14 @@
 
                 closeModal();
 
-
                 form.reset();
 
-
-                document
-                .getElementById(
-                    "reportMunicipality"
-                )
-                .innerHTML =
-                    `<option value="">
-                        Primero selecciona la provincia
-                    </option>`;
-
-
-                document
-                .getElementById(
-                    "reportDistrict"
-                )
-                .innerHTML =
-                    `<option value="">
-                        Selecciona primero el municipio
-                    </option>`;
-
+                resetReportSelectors();
 
                 setTodayDate();
 
-
                 await loadAndRenderPrices();
+
 
             } catch (error) {
 
@@ -2690,6 +3281,39 @@
                     "❌ No se pudo guardar el reporte.\n\n" +
                     "Revisa tu conexión e inténtalo nuevamente."
                 );
+
+            }
+
+        }
+
+
+        function resetReportSelectors() {
+
+            const municipality =
+                document.getElementById(
+                    "reportMunicipality"
+                );
+
+            const district =
+                document.getElementById(
+                    "reportDistrict"
+                );
+
+            if (municipality) {
+
+                municipality.innerHTML =
+                    `<option value="">
+                        Primero selecciona la provincia
+                    </option>`;
+
+            }
+
+            if (district) {
+
+                district.innerHTML =
+                    `<option value="">
+                        Selecciona primero el municipio
+                    </option>`;
 
             }
 
@@ -3123,6 +3747,697 @@
         }
 
 
+
+        // =================================================
+        // BUSCADOR DE MUNICIPIOS Y ZONAS
+        // =================================================
+
+        function buildLocationIndex() {
+
+            const results = [];
+
+
+            Object.keys(
+                locations || {}
+            ).forEach(
+                function(province) {
+
+                    const municipalities =
+                        locations[province] || {};
+
+
+                    Object.keys(
+                        municipalities
+                    ).forEach(
+                        function(municipality) {
+
+                            /*
+                            El propio municipio es un resultado.
+                            */
+
+                            results.push({
+
+                                type:
+                                    "municipio",
+
+                                name:
+                                    municipality,
+
+                                province:
+                                    province,
+
+                                municipality:
+                                    municipality,
+
+                                district:
+                                    ""
+
+                            });
+
+
+                            const districts =
+                                municipalities[
+                                    municipality
+                                ]?.districts || [];
+
+
+                            districts.forEach(
+                                function(district) {
+
+                                    results.push({
+
+                                        type:
+                                            "zona",
+
+                                        name:
+                                            district,
+
+                                        province:
+                                            province,
+
+                                        municipality:
+                                            municipality,
+
+                                        district:
+                                            district
+
+                                    });
+
+                                }
+                            );
+
+                        }
+                    );
+
+                }
+            );
+
+
+            return results;
+        }
+
+
+        let locationSearchIndex =
+            [];
+
+
+        function refreshLocationSearchIndex() {
+
+            locationSearchIndex =
+                buildLocationIndex();
+
+        }
+
+
+        function searchLocations(
+            query
+        ) {
+
+            const text =
+                normalizeText(
+                    query
+                );
+
+
+            if (
+                !text
+            ) {
+
+                return [];
+
+            }
+
+
+            return locationSearchIndex
+                .filter(
+                    function(item) {
+
+                        return (
+
+                            normalizeText(
+                                item.name
+                            ).includes(text)
+
+                            ||
+
+                            normalizeText(
+                                item.municipality
+                            ).includes(text)
+
+                            ||
+
+                            normalizeText(
+                                item.province
+                            ).includes(text)
+
+                        );
+
+                    }
+                )
+                .sort(
+                    function(a, b) {
+
+                        /*
+                        Prioridad:
+                        coincidencia exacta
+                        → empieza por el texto
+                        → contiene el texto
+                        */
+
+                        const aExact =
+                            normalizeText(
+                                a.name
+                            ) === text;
+
+                        const bExact =
+                            normalizeText(
+                                b.name
+                            ) === text;
+
+
+                        if (
+                            aExact !==
+                            bExact
+                        ) {
+
+                            return aExact
+                                ? -1
+                                : 1;
+
+                        }
+
+
+                        const aStarts =
+                            normalizeText(
+                                a.name
+                            ).startsWith(
+                                text
+                            );
+
+                        const bStarts =
+                            normalizeText(
+                                b.name
+                            ).startsWith(
+                                text
+                            );
+
+
+                        if (
+                            aStarts !==
+                            bStarts
+                        ) {
+
+                            return aStarts
+                                ? -1
+                                : 1;
+
+                        }
+
+
+                        return (
+                            a.name
+                        )
+                        .localeCompare(
+                            b.name,
+                            "es"
+                        );
+
+                    }
+                )
+                .slice(
+                    0,
+                    12
+                );
+
+        }
+
+
+        function renderLocationResults(
+            container,
+            results,
+            onSelect
+        ) {
+
+            if (!container) {
+                return;
+            }
+
+
+            if (!results.length) {
+
+                container.innerHTML =
+                    `<div style="padding:14px;color:#717a73;">
+                        No encontramos ese municipio o zona.
+                    </div>`;
+
+                container.style.display =
+                    "block";
+
+                return;
+
+            }
+
+
+            container.innerHTML =
+                "";
+
+
+            results.forEach(
+                function(item) {
+
+                    const button =
+                        document.createElement(
+                            "button"
+                        );
+
+
+                    button.type =
+                        "button";
+
+
+                    button.className =
+                        "location-result";
+
+
+                    const place =
+                        item.type ===
+                        "zona"
+                            ? item.name
+                            : item.municipality;
+
+
+                    const detail =
+                        item.type ===
+                        "zona"
+                            ? `${item.municipality}, ${item.province}`
+                            : `Municipio · ${item.province}`;
+
+
+                    button.innerHTML =
+                        `
+                        <strong>
+                            ${escapeHtml(
+                                place
+                            )}
+                        </strong>
+
+                        <small>
+                            ${escapeHtml(
+                                detail
+                            )}
+                        </small>
+                        `;
+
+
+                    button.addEventListener(
+                        "click",
+                        function() {
+
+                            onSelect(
+                                item
+                            );
+
+                            container.style.display =
+                                "none";
+
+                        }
+                    );
+
+
+                    container.appendChild(
+                        button
+                    );
+
+                }
+            );
+
+
+            container.style.display =
+                "block";
+
+        }
+
+
+        function selectMainLocation(
+            item
+        ) {
+
+            const province =
+                document.getElementById(
+                    "locationProvince"
+                );
+
+            const municipality =
+                document.getElementById(
+                    "locationMunicipality"
+                );
+
+            const district =
+                document.getElementById(
+                    "locationDistrict"
+                );
+
+            const search =
+                document.getElementById(
+                    "locationSearch"
+                );
+
+
+            province.value =
+                item.province;
+
+
+            updateMunicipalities();
+
+
+            municipality.value =
+                item.municipality;
+
+
+            updateMainDistricts();
+
+
+            district.value =
+                item.district || "";
+
+
+            if (search) {
+
+                search.value =
+                    item.name;
+
+            }
+
+
+            updateMainPrice();
+
+        }
+
+
+        function searchMainLocation() {
+
+            const input =
+                document.getElementById(
+                    "locationSearch"
+                );
+
+            const results =
+                document.getElementById(
+                    "locationSearchResults"
+                );
+
+
+            if (!input || !results) {
+                return;
+            }
+
+
+            renderLocationResults(
+                results,
+                searchLocations(
+                    input.value
+                ),
+                selectMainLocation
+            );
+
+        }
+
+
+        function selectReportLocation(
+            item
+        ) {
+
+            const province =
+                document.getElementById(
+                    "reportProvince"
+                );
+
+            const municipality =
+                document.getElementById(
+                    "reportMunicipality"
+                );
+
+            const district =
+                document.getElementById(
+                    "reportDistrict"
+                );
+
+            const search =
+                document.getElementById(
+                    "reportLocationSearch"
+                );
+
+
+            province.value =
+                item.province;
+
+
+            updateReportMunicipalities();
+
+
+            municipality.value =
+                item.municipality;
+
+
+            updateReportDistricts();
+
+
+            district.value =
+                item.district || "";
+
+
+            if (search) {
+
+                search.value =
+                    item.name;
+
+            }
+
+
+            updateReportSummary();
+
+        }
+
+
+        function searchReportLocation() {
+
+            const input =
+                document.getElementById(
+                    "reportLocationSearch"
+                );
+
+            const results =
+                document.getElementById(
+                    "reportLocationSearchResults"
+                );
+
+
+            if (!input || !results) {
+                return;
+            }
+
+
+            renderLocationResults(
+                results,
+                searchLocations(
+                    input.value
+                ),
+                selectReportLocation
+            );
+
+        }
+
+
+        // =================================================
+        // RESUMEN DEL REPORTE
+        // =================================================
+
+        function updateReportSummary() {
+
+            const summary =
+                document.getElementById(
+                    "reportSummary"
+                );
+
+
+            if (!summary) {
+                return;
+            }
+
+
+            const province =
+                document.getElementById(
+                    "reportProvince"
+                )?.value || "";
+
+
+            const municipality =
+                document.getElementById(
+                    "reportMunicipality"
+                )?.value || "";
+
+
+            const district =
+                document.getElementById(
+                    "reportDistrict"
+                )?.value || "";
+
+
+            const price =
+                document.getElementById(
+                    "reportPrice"
+                )?.value || "";
+
+
+            if (
+                !province &&
+                !municipality &&
+                !price
+            ) {
+
+                summary.innerHTML =
+                    "";
+
+                return;
+
+            }
+
+
+            summary.innerHTML =
+                `
+                <div class="report-summary">
+
+                    <strong>
+                        Revisa tu reporte antes de enviarlo
+                    </strong>
+
+                    <br>
+
+                    📍 ${escapeHtml(
+                        district
+                            ? district
+                            : municipality || "—"
+                    )}
+
+                    <br>
+
+                    🗺️ ${escapeHtml(
+                        municipality || "—"
+                    )},
+
+                    ${escapeHtml(
+                        province || "—"
+                    )}
+
+                    <br>
+
+                    🐷 Precio:
+
+                    <strong>
+                        ${
+                            price
+                                ? "RD$" +
+                                  escapeHtml(
+                                      price
+                                  ) +
+                                  "/kg"
+                                : "—"
+                        }
+                    </strong>
+
+                </div>
+                `;
+
+        }
+
+
+        // =================================================
+        // CERRAR RESULTADOS AL HACER CLICK AFUERA
+        // =================================================
+
+        document.addEventListener(
+            "click",
+            function(event) {
+
+                [
+                    "locationSearchResults",
+                    "reportLocationSearchResults"
+                ]
+                .forEach(
+                    function(id) {
+
+                        const box =
+                            document.getElementById(
+                                id
+                            );
+
+
+                        if (!box) {
+                            return;
+                        }
+
+
+                        if (
+                            !box.contains(
+                                event.target
+                            )
+                        ) {
+
+                            box.style.display =
+                                "none";
+
+                        }
+
+                    }
+                );
+
+            }
+        );
+
+
+        // =================================================
+        // ACTUALIZAR RESUMEN AL CAMBIAR FORMULARIO
+        // =================================================
+
+        document.addEventListener(
+            "input",
+            function(event) {
+
+                if (
+                    event.target.id ===
+                    "reportPrice"
+                ) {
+
+                    updateReportSummary();
+
+                }
+
+            }
+        );
+
+
+        document.addEventListener(
+            "change",
+            function(event) {
+
+                if (
+                    [
+                        "reportProvince",
+                        "reportMunicipality",
+                        "reportDistrict"
+                    ].includes(
+                        event.target.id
+                    )
+                ) {
+
+                    updateReportSummary();
+
+                }
+
+            }
+        );
+
+
         // =================================================
         // HACER FUNCIONES DISPONIBLES AL HTML
         // =================================================
@@ -3156,6 +4471,12 @@
 
         window.filterPrices =
             filterPrices;
+
+        window.searchMainLocation =
+            searchMainLocation;
+
+        window.searchReportLocation =
+            searchReportLocation;
 
 
         // =================================================
@@ -3249,825 +4570,7 @@
 
 
 
-<script>
-/* =========================================================
-   PRECIO CERDO RD — 3 MEJORAS
-   1. Referencia de todo el municipio
-   2. Historial real
-   3. Ubicación automática preparada para geocodificación
-   ========================================================= */
 
-(function () {
-
-    const MAX_DAYS = 30;
-
-    function clean(value) {
-        return String(value || "").trim().toLowerCase();
-    }
-
-    function getReports() {
-        if (Array.isArray(window.currentReports)) return window.currentReports;
-        if (Array.isArray(window.reportsCache)) return window.reportsCache;
-        return [];
-    }
-
-    function getReportPrice(report) {
-        const value = Number(
-            report.precio ??
-            report.price ??
-            report.precioKg
-        );
-
-        return Number.isFinite(value) && value > 0
-            ? value
-            : null;
-    }
-
-    function getReportDate(report) {
-
-        if (report.fecha) {
-
-            const date = new Date(
-                String(report.fecha) + "T12:00:00"
-            );
-
-            if (!Number.isNaN(date.getTime())) {
-                return date;
-            }
-        }
-
-        if (
-            report.creadoEn &&
-            typeof report.creadoEn.toDate === "function"
-        ) {
-            return report.creadoEn.toDate();
-        }
-
-        return null;
-    }
-
-    function recent(report) {
-
-        const date = getReportDate(report);
-
-        if (!date) {
-            return false;
-        }
-
-        const age =
-            Date.now() - date.getTime();
-
-        return (
-            age >= 0 &&
-            age <= MAX_DAYS * 24 * 60 * 60 * 1000
-        );
-    }
-
-    function median(values) {
-
-        const sorted =
-            values
-                .filter(Number.isFinite)
-                .sort((a, b) => a - b);
-
-        if (!sorted.length) {
-            return null;
-        }
-
-        const middle =
-            Math.floor(sorted.length / 2);
-
-        if (sorted.length % 2) {
-            return sorted[middle];
-        }
-
-        return (
-            sorted[middle - 1] +
-            sorted[middle]
-        ) / 2;
-    }
-
-    function calculateReference(reports) {
-
-        const values =
-            reports
-                .map(getReportPrice)
-                .filter(value => value !== null);
-
-        if (!values.length) {
-            return null;
-        }
-
-        /*
-        Con pocos reportes usamos la mediana directamente.
-        Con 5 o más aplicamos IQR para reducir valores extremos.
-        */
-
-        if (values.length < 5) {
-            return median(values);
-        }
-
-        const sorted =
-            [...values].sort(
-                (a, b) => a - b
-            );
-
-        const half =
-            Math.floor(sorted.length / 2);
-
-        const lower =
-            sorted.slice(0, half);
-
-        const upper =
-            sorted.slice(
-                Math.ceil(sorted.length / 2)
-            );
-
-        const q1 = median(lower);
-        const q3 = median(upper);
-
-        if (
-            q1 === null ||
-            q3 === null
-        ) {
-            return median(values);
-        }
-
-        const iqr =
-            q3 - q1;
-
-        const minimum =
-            q1 - (1.5 * iqr);
-
-        const maximum =
-            q3 + (1.5 * iqr);
-
-        const filtered =
-            values.filter(
-                value =>
-                    value >= minimum &&
-                    value <= maximum
-            );
-
-        return median(
-            filtered.length
-                ? filtered
-                : values
-        );
-    }
-
-
-    function getSelection() {
-
-        return {
-
-            province:
-                document
-                    .getElementById(
-                        "locationProvince"
-                    )?.value || "",
-
-            municipality:
-                document
-                    .getElementById(
-                        "locationMunicipality"
-                    )?.value || "",
-
-            district:
-                document
-                    .getElementById(
-                        "locationDistrict"
-                    )?.value || ""
-
-        };
-    }
-
-
-    function reportsForSelection() {
-
-        const selection =
-            getSelection();
-
-        const province =
-            clean(selection.province);
-
-        const municipality =
-            clean(selection.municipality);
-
-        const district =
-            clean(selection.district);
-
-        if (
-            !province ||
-            !municipality
-        ) {
-            return [];
-        }
-
-        return getReports().filter(
-            report => {
-
-                if (!recent(report)) {
-                    return false;
-                }
-
-                if (
-                    clean(report.provincia) !==
-                    province
-                ) {
-                    return false;
-                }
-
-                if (
-                    clean(report.municipio) !==
-                    municipality
-                ) {
-                    return false;
-                }
-
-                /*
-                Si el usuario eligió un distrito,
-                filtramos únicamente ese distrito.
-
-                Si dejó "Todo el municipio",
-                NO filtramos distrito.
-                */
-
-                if (district) {
-
-                    const reportDistrict =
-                        clean(
-                            report.distrito ||
-                            report.zona
-                        );
-
-                    return (
-                        reportDistrict ===
-                        district
-                    );
-                }
-
-                return true;
-            }
-        );
-    }
-
-
-    function updateMunicipalityOption() {
-
-        const select =
-            document.getElementById(
-                "locationMunicipality"
-            );
-
-        if (!select) {
-            return;
-        }
-
-        const exists =
-            Array.from(
-                select.options
-            ).some(
-                option =>
-                    option.value === ""
-            );
-
-        if (!exists) {
-
-            const option =
-                document.createElement(
-                    "option"
-                );
-
-            option.value = "";
-
-            option.textContent =
-                "Todo el municipio";
-
-            select.insertBefore(
-                option,
-                select.firstChild
-            );
-        }
-    }
-
-
-    function updateReference() {
-
-        const selection =
-            getSelection();
-
-        const reports =
-            reportsForSelection();
-
-        const reference =
-            calculateReference(
-                reports
-            );
-
-        const mainPrice =
-            document.getElementById(
-                "mainPrice"
-            );
-
-        const mainPlace =
-            document.getElementById(
-                "mainPlace"
-            );
-
-        const mainProvince =
-            document.getElementById(
-                "mainProvince"
-            );
-
-        const mainMeta =
-            document.getElementById(
-                "mainMeta"
-            );
-
-        const message =
-            document.getElementById(
-                "selectionMessage"
-            );
-
-        if (
-            mainProvince
-        ) {
-
-            mainProvince.textContent =
-                selection.province
-                    ? selection.province
-                    : "Provincia no seleccionada";
-
-        }
-
-        if (
-            mainPlace
-        ) {
-
-            if (
-                !selection.municipality
-            ) {
-
-                mainPlace.textContent =
-                    "Selecciona tu zona";
-
-            } else if (
-                selection.district
-            ) {
-
-                mainPlace.textContent =
-                    selection.district;
-
-            } else {
-
-                mainPlace.textContent =
-                    selection.municipality;
-
-            }
-        }
-
-
-        if (mainPrice) {
-
-            mainPrice.textContent =
-                reference !== null
-                    ? `RD$${Math.round(reference)}`
-                    : "—";
-        }
-
-
-        if (mainMeta) {
-
-            if (!selection.municipality) {
-
-                mainMeta.textContent =
-                    "Selecciona una zona para consultar el precio.";
-
-            } else {
-
-                const scope =
-                    selection.district
-                        ? selection.district
-                        : `todo ${selection.municipality}`;
-
-                mainMeta.textContent =
-                    reference !== null
-                        ? `Referencia calculada con ${reports.length} reporte(s) reciente(s) de ${scope}.`
-                        : `No hay reportes de los últimos ${MAX_DAYS} días para esta ubicación.`;
-            }
-        }
-
-
-        if (message) {
-
-            if (!selection.municipality) {
-
-                message.textContent =
-                    "💡 Selecciona una provincia y un municipio.";
-
-            } else if (
-                !selection.district
-            ) {
-
-                message.textContent =
-                    `📊 Mostrando la referencia de todo el municipio de ${selection.municipality}.`;
-
-            } else {
-
-                message.textContent =
-                    `📍 Mostrando únicamente los reportes de ${selection.district}.`;
-            }
-        }
-
-        updateHistoryButton();
-    }
-
-
-    function renderHistory() {
-
-        const panel =
-            document.getElementById(
-                "historyPanel"
-            );
-
-        if (!panel) {
-            return;
-        }
-
-        const selection =
-            getSelection();
-
-        const reports =
-            reportsForSelection()
-                .filter(
-                    report =>
-                        getReportPrice(report)
-                        !== null
-                )
-                .sort(
-                    (a, b) => {
-
-                        const dateA =
-                            getReportDate(a)?.getTime()
-                            || 0;
-
-                        const dateB =
-                            getReportDate(b)?.getTime()
-                            || 0;
-
-                        return dateB - dateA;
-                    }
-                );
-
-
-        if (!reports.length) {
-
-            panel.innerHTML = `
-                <div class="info-box">
-                    No hay historial reciente para esta ubicación.
-                </div>
-            `;
-
-            panel.style.display =
-                "block";
-
-            return;
-        }
-
-
-        const title =
-            selection.district
-                ? `Historial de ${selection.district}`
-                : `Historial de ${selection.municipality}`;
-
-
-        panel.innerHTML = `
-
-            <div class="section"
-                 style="margin:0;box-shadow:none;border:1px solid #e3e9e4;">
-
-                <h3 class="section-title">
-                    📈 ${title}
-                </h3>
-
-                <p class="section-subtitle">
-                    Reportes utilizados como referencia durante los últimos ${MAX_DAYS} días.
-                </p>
-
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    Fecha
-                                </th>
-
-                                <th>
-                                    Precio/kg
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            ${reports
-                                .map(
-                                    report => {
-
-                                        const date =
-                                            getReportDate(
-                                                report
-                                            );
-
-                                        const dateText =
-                                            date
-                                                ? date.toLocaleDateString(
-                                                    "es-DO"
-                                                )
-                                                : "—";
-
-                                        const price =
-                                            getReportPrice(
-                                                report
-                                            );
-
-                                        return `
-
-                                            <tr>
-
-                                                <td>
-                                                    ${dateText}
-                                                </td>
-
-                                                <td class="price">
-                                                    RD$${price.toFixed(2)}
-                                                </td>
-
-                                            </tr>
-
-                                        `;
-
-                                    }
-                                )
-                                .join("")}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        `;
-
-        panel.style.display =
-            "block";
-    }
-
-
-    function updateHistoryButton() {
-
-        const button =
-            document.getElementById(
-                "historyButton"
-            );
-
-        if (!button) {
-            return;
-        }
-
-        button.onclick =
-            renderHistory;
-    }
-
-
-    /*
-    =======================================================
-    UBICACIÓN
-
-    Primero obtenemos las coordenadas.
-
-    IMPORTANTE:
-    el navegador NO convierte coordenadas a municipio.
-    Esa conversión requiere geocodificación.
-
-    Dejamos las coordenadas guardadas para conectar
-    posteriormente un servicio de geocodificación.
-    =======================================================
-    */
-
-    window.useMyLocation =
-        function () {
-
-            if (
-                !navigator.geolocation
-            ) {
-
-                alert(
-                    "Tu navegador no permite obtener la ubicación."
-                );
-
-                return;
-            }
-
-
-            const button =
-                document.querySelector(
-                    ".location-button"
-                );
-
-
-            if (button) {
-
-                button.textContent =
-                    "📍 Obteniendo ubicación...";
-
-                button.disabled =
-                    true;
-            }
-
-
-            navigator.geolocation.getCurrentPosition(
-
-                function (position) {
-
-                    window.userCoordinates = {
-
-                        latitude:
-                            position.coords.latitude,
-
-                        longitude:
-                            position.coords.longitude
-
-                    };
-
-
-                    if (button) {
-
-                        button.textContent =
-                            "📍 Ubicación obtenida";
-
-                        button.disabled =
-                            false;
-                    }
-
-
-                    const message =
-                        document.getElementById(
-                            "selectionMessage"
-                        );
-
-
-                    if (message) {
-
-                        message.textContent =
-                            "📍 Ubicación obtenida. Selecciona la zona manualmente mientras conectamos la conversión automática a municipio.";
-
-                    }
-
-                },
-
-                function () {
-
-                    if (button) {
-
-                        button.textContent =
-                            "📍 Usar mi ubicación";
-
-                        button.disabled =
-                            false;
-                    }
-
-
-                    alert(
-                        "No pudimos obtener tu ubicación. Puedes seleccionar tu zona manualmente."
-                    );
-
-                },
-
-                {
-
-                    enableHighAccuracy:
-                        false,
-
-                    timeout:
-                        10000,
-
-                    maximumAge:
-                        300000
-
-                }
-
-            );
-
-        };
-
-
-    function initializeEnhancements() {
-
-        updateMunicipalityOption();
-
-        updateReference();
-
-
-        const province =
-            document.getElementById(
-                "locationProvince"
-            );
-
-        const municipality =
-            document.getElementById(
-                "locationMunicipality"
-            );
-
-        const district =
-            document.getElementById(
-                "locationDistrict"
-            );
-
-
-        [
-            province,
-            municipality,
-            district
-        ]
-        .filter(Boolean)
-        .forEach(
-            element => {
-
-                element.addEventListener(
-                    "change",
-                    function () {
-
-                        /*
-                        Si cambia el municipio,
-                        actualizamos inmediatamente
-                        la referencia.
-
-                        updateMainDistricts()
-                        será responsable de llenar
-                        los distritos.
-                        */
-
-                        setTimeout(
-                            updateReference,
-                            50
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-
-        const historyButton =
-            document.getElementById(
-                "historyButton"
-            );
-
-
-        if (historyButton) {
-
-            historyButton.addEventListener(
-                "click",
-                renderHistory
-            );
-
-        }
-
-    }
-
-
-    document.addEventListener(
-        "locationsReady",
-        initializeEnhancements
-    );
-
-
-    window.addEventListener(
-        "load",
-        function () {
-
-            setTimeout(
-                initializeEnhancements,
-                700
-            );
-
-        }
-    );
-
-
-})();
-</script>
 
 </body>
 

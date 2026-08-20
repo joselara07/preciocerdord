@@ -3924,6 +3924,12 @@ input[type="number"].price-input {
             }
 
 
+            /* Si aún no existe el índice, lo construimos ahora. */
+            if (locationSearchIndex.length === 0) {
+                refreshLocationSearchIndex();
+            }
+
+
             return locationSearchIndex
                 .filter(
                     function(item) {
@@ -4534,6 +4540,9 @@ input[type="number"].price-input {
         window.searchReportLocation =
             searchReportLocation;
 
+        window.refreshLocationSearchIndex =
+            refreshLocationSearchIndex;
+
 
         // =================================================
         // CLIC FUERA DEL MODAL
@@ -4573,6 +4582,15 @@ input[type="number"].price-input {
         try {
 
             await waitForLocations();
+
+            /* Construir el índice después de cargar locations.js. */
+            refreshLocationSearchIndex();
+
+            console.log(
+                "🔎 Índice de búsqueda territorial:",
+                locationSearchIndex.length,
+                "lugares"
+            );
 
 
             populateProvinceSelects();

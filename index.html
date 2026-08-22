@@ -349,7 +349,7 @@
 
         .filters {
             display: grid;
-            grid-template-columns: 1fr 200px;
+            grid-template-columns: 1fr 200px 150px;
             gap: 12px;
             margin-bottom: 15px;
         }
@@ -405,6 +405,59 @@
         .status.warning {
             background: #fef3c7;
             color: #92400e;
+        }
+
+
+        .about-section {
+            margin-top: 28px;
+        }
+
+        .table-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .pagination-info {
+            color: #68736b;
+            font-size: 13px;
+        }
+
+        .pagination-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pagination-button {
+            border: 1px solid #d8dfda;
+            background: white;
+            color: #14532d;
+            border-radius: 9px;
+            padding: 9px 13px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .pagination-button:hover:not(:disabled) {
+            background: #eef7f0;
+            border-color: #b9d5bf;
+        }
+
+        .pagination-button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .pagination-page {
+            min-width: 92px;
+            text-align: center;
+            color: #59635b;
+            font-size: 13px;
+            font-weight: bold;
         }
 
         /* =========================
@@ -725,6 +778,20 @@
 
             .filters {
                 grid-template-columns: 1fr;
+            }
+
+            .table-pagination {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .pagination-buttons {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .pagination-button {
+                flex: 1;
             }
 
             .report-area {
@@ -1240,6 +1307,37 @@ input[type="number"].price-input {
 
         </div>
 
+
+        <div class="field">
+
+            <label>
+                Mostrar
+            </label>
+
+            <select
+                id="rowsPerPage"
+                onchange="changeRowsPerPage()">
+
+                <option value="10" selected>
+                    10
+                </option>
+
+                <option value="20">
+                    20
+                </option>
+
+                <option value="50">
+                    50
+                </option>
+
+                <option value="100">
+                    100
+                </option>
+
+            </select>
+
+        </div>
+
     </div>
 
 
@@ -1319,6 +1417,90 @@ input[type="number"].price-input {
             </tbody>
 
         </table>
+
+    </div>
+
+    <div
+        class="table-pagination"
+        id="tablePagination">
+
+        <div
+            class="pagination-info"
+            id="paginationInfo">
+            Mostrando 0 resultados
+        </div>
+
+        <div class="pagination-buttons">
+
+            <button
+                type="button"
+                class="pagination-button"
+                id="previousPageButton"
+                onclick="changePricePage(-1)">
+                ← Anterior
+            </button>
+
+            <div
+                class="pagination-page"
+                id="paginationPage">
+                Página 1 de 1
+            </div>
+
+            <button
+                type="button"
+                class="pagination-button"
+                id="nextPageButton"
+                onclick="changePricePage(1)">
+                Siguiente →
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     INFORMACION
+========================= -->
+
+<section class="section about-section">
+
+    <h2 class="section-title">
+        ℹ️ Sobre Precio Cerdo RD
+    </h2>
+
+    <br>
+
+    <div class="info-box">
+
+        <strong>Precio Cerdo RD</strong> es una plataforma
+        creada para facilitar la consulta de precios del
+        cerdo vivo en República Dominicana.
+
+        <br><br>
+
+        El precio mostrado corresponde a una
+        <strong>zona específica</strong> y se obtiene
+        a partir de reportes recientes realizados por
+        participantes del mercado.
+
+        <br><br>
+
+        Una misma provincia puede tener diferentes precios
+        entre sus municipios y zonas. Por eso la plataforma
+        busca mostrar el comportamiento real del mercado
+        local.
+
+        <br><br>
+
+        Los precios son de referencia y pueden variar según
+        las condiciones particulares de cada operación.
+        <strong>
+            Precio Cerdo RD no establece ni regula los precios
+            de compra o venta.
+        </strong>
 
     </div>
 
@@ -1534,6 +1716,7 @@ input[type="number"].price-input {
             getDocs,
             query,
             where,
+            onSnapshot,
             doc,
             updateDoc,
             serverTimestamp
@@ -4559,6 +4742,219 @@ input[type="number"].price-input {
 
         let allPriceRows = [];
 
+        let visiblePriceRows = [];
+
+        let currentPricePage = 1;
+
+        let priceRowsPerPage = 10;
+
+
+        let unsubscribePriceListener =
+            null;
+
+
+        function processPriceSnapshot(
+            snapshot
+        ) {
+
+            const grouped =
+                {};
+
+
+            snapshot.forEach(
+                function(doc) {
+
+                    const data =
+                        doc.data();
+
+
+                    if (
+                        !data.provincia ||
+                        !data.municipio ||
+                        typeof data.precio !==
+                            "number" ||
+                        data.precio <= 0
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    const district =
+                        data.distrito ||
+                        "";
+
+
+                    const key =
+                        [
+                            data.provincia,
+                            data.municipio,
+                            district
+                        ].join(
+                            "|"
+                        );
+
+
+                    if (!grouped[key]) {
+
+                        grouped[key] = [];
+
+                    }
+
+
+                    grouped[key].push(
+                        data
+                    );
+
+                }
+            );
+
+
+            allPriceRows =
+                Object.keys(
+                    grouped
+                )
+                .map(
+                    function(key) {
+
+                        const reports =
+                            grouped[key];
+
+
+                        const first =
+                            reports[0];
+
+
+                        const reference =
+                            getReferenceFromReports(
+                                reports
+                            );
+
+
+                        /*
+                        En circunstancias excepcionales todos los
+                        reportes podrían quedar fuera de la ventana
+                        temporal. No mostramos una fila vacía.
+                        */
+                        if (!reference) {
+                            return null;
+                        }
+
+
+                        return {
+
+                            provincia:
+                                first.provincia,
+
+                            municipio:
+                                first.municipio,
+
+                            distrito:
+                                first.distrito ||
+                                "",
+
+                            price:
+                                reference.price,
+
+                            reports:
+                                reference.count,
+
+                            fecha:
+                                reference.latestDate,
+
+                            confidence:
+                                reference.confidence,
+
+                            confidenceText:
+                                reference.confidenceText
+
+                        };
+
+                    }
+                )
+                .filter(Boolean)
+                .sort(
+                    function(a, b) {
+
+                        return (
+                            b.fecha || ""
+                        ).localeCompare(
+                            a.fecha || ""
+                        );
+
+                    }
+                );
+
+
+            /*
+            Conservar búsqueda y orden actuales.
+            filterPrices() también renderiza la tabla.
+            */
+            currentPricePage =
+                1;
+
+
+            filterPrices();
+
+
+            const statReports =
+                document.getElementById(
+                    "statReports"
+                );
+
+
+            if (statReports) {
+
+                statReports.textContent =
+                    snapshot.size;
+
+            }
+
+
+            const statZones =
+                document.getElementById(
+                    "statZones"
+                );
+
+
+            if (statZones) {
+
+                statZones.textContent =
+                    allPriceRows.length;
+
+            }
+
+
+            /*
+            Si el usuario tiene una zona seleccionada,
+            actualizamos también el precio principal.
+            De esta forma un reporte nuevo realizado desde
+            otro teléfono/navegador se refleja sin recargar.
+            */
+            const province =
+                document.getElementById(
+                    "locationProvince"
+                )?.value || "";
+
+
+            const municipality =
+                document.getElementById(
+                    "locationMunicipality"
+                )?.value || "";
+
+
+            if (
+                province &&
+                municipality
+            ) {
+
+                updateMainPrice();
+
+            }
+
+        }
+
 
         async function loadAndRenderPrices() {
 
@@ -4576,6 +4972,19 @@ input[type="number"].price-input {
             }
 
 
+            /*
+            Si el listener ya existe, no creamos otro.
+            Los cambios de Firestore llegarán automáticamente.
+            */
+            if (
+                unsubscribePriceListener
+            ) {
+
+                return;
+
+            }
+
+
             table.innerHTML =
                 `<tr>
                     <td colspan="7"
@@ -4587,165 +4996,66 @@ input[type="number"].price-input {
 
             try {
 
-                const snapshot =
-                    await getRecentReportsSnapshot();
+                const cutoffTimestamp =
+                    getRecentCutoffDate();
 
 
-                const grouped =
-                    {};
+                const recentQuery =
+                    query(
+                        collection(
+                            db,
+                            "reports"
+                        ),
+                        where(
+                            "creadoEn",
+                            ">=",
+                            cutoffTimestamp
+                        )
+                    );
 
 
-                snapshot.forEach(
-                    function(doc) {
+                unsubscribePriceListener =
+                    onSnapshot(
 
-                        const data =
-                            doc.data();
+                        recentQuery,
 
+                        function(snapshot) {
 
-                        if (
-                            !data.provincia ||
-                            !data.municipio ||
-                            typeof data.precio !==
-                                "number" ||
-                            data.precio <= 0
-                        ) {
+                            processPriceSnapshot(
+                                snapshot
+                            );
 
-                            return;
+                        },
 
-                        }
+                        function(error) {
 
-
-                        const district =
-                            data.distrito ||
-                            "";
-
-
-                        const key =
-                            [
-                                data.provincia,
-                                data.municipio,
-                                district
-                            ].join(
-                                "|"
+                            console.error(
+                                "Error escuchando reportes en tiempo real:",
+                                error
                             );
 
 
-                        if (!grouped[key]) {
-
-                            grouped[key] = [];
+                            table.innerHTML =
+                                `<tr>
+                                    <td colspan="7"
+                                        style="text-align:center;padding:24px;">
+                                        ❌ No se pudieron cargar los precios.
+                                    </td>
+                                </tr>`;
 
                         }
 
+                    );
 
-                        grouped[key].push(
-                            data
-                        );
 
-                    }
+                console.log(
+                    "🔴 Actualización de precios en tiempo real activada."
                 );
-
-
-                allPriceRows =
-                    Object.keys(
-                        grouped
-                    )
-                    .map(
-                        function(key) {
-
-                            const reports =
-                                grouped[key];
-
-
-                            const first =
-                                reports[0];
-
-
-                            const reference =
-                                getReferenceFromReports(
-                                    reports
-                                );
-
-
-                            return {
-
-                                provincia:
-                                    first.provincia,
-
-                                municipio:
-                                    first.municipio,
-
-                                distrito:
-                                    first.distrito ||
-                                    "",
-
-                                price:
-                                    reference.price,
-
-                                reports:
-                                    reference.count,
-
-                                fecha:
-                                    reference.latestDate,
-
-                                confidence:
-                                    reference.confidence,
-
-                                confidenceText:
-                                    reference.confidenceText
-
-                            };
-
-                        }
-                    )
-                    .sort(
-                        function(a, b) {
-
-                            return (
-                                b.fecha || ""
-                            ).localeCompare(
-                                a.fecha || ""
-                            );
-
-                        }
-                    );
-
-
-                renderPriceRows(
-                    allPriceRows
-                );
-
-
-                const statReports =
-                    document.getElementById(
-                        "statReports"
-                    );
-
-
-                if (statReports) {
-
-                    statReports.textContent =
-                        snapshot.size;
-
-                }
-
-
-                const statZones =
-                    document.getElementById(
-                        "statZones"
-                    );
-
-
-                if (statZones) {
-
-                    statZones.textContent =
-                        allPriceRows.length;
-
-                }
 
             } catch (error) {
 
                 console.error(
-                    "Error cargando reportes:",
+                    "Error activando actualización en tiempo real:",
                     error
                 );
 
@@ -4763,6 +5073,92 @@ input[type="number"].price-input {
         }
 
 
+        function updatePaginationControls(
+            totalRows,
+            startIndex,
+            endIndex,
+            totalPages
+        ) {
+
+            const info =
+                document.getElementById(
+                    "paginationInfo"
+                );
+
+            const page =
+                document.getElementById(
+                    "paginationPage"
+                );
+
+            const previousButton =
+                document.getElementById(
+                    "previousPageButton"
+                );
+
+            const nextButton =
+                document.getElementById(
+                    "nextPageButton"
+                );
+
+
+            if (info) {
+
+                if (totalRows === 0) {
+
+                    info.textContent =
+                        "Mostrando 0 resultados";
+
+                } else {
+
+                    info.textContent =
+                        "Mostrando " +
+                        (startIndex + 1) +
+                        "–" +
+                        endIndex +
+                        " de " +
+                        totalRows;
+
+                }
+
+            }
+
+
+            if (page) {
+
+                page.textContent =
+                    "Página " +
+                    currentPricePage +
+                    " de " +
+                    Math.max(
+                        totalPages,
+                        1
+                    );
+
+            }
+
+
+            if (previousButton) {
+
+                previousButton.disabled =
+                    currentPricePage <= 1;
+
+            }
+
+
+            if (nextButton) {
+
+                nextButton.disabled =
+                    (
+                        totalRows === 0 ||
+                        currentPricePage >=
+                        totalPages
+                    );
+
+            }
+
+        }
+
+
         function renderPriceRows(rows) {
 
             const table =
@@ -4772,28 +5168,98 @@ input[type="number"].price-input {
                 );
 
 
+            visiblePriceRows =
+                Array.isArray(rows)
+                    ? rows
+                    : [];
+
+
+            const totalRows =
+                visiblePriceRows.length;
+
+
+            const totalPages =
+                Math.max(
+                    1,
+                    Math.ceil(
+                        totalRows /
+                        priceRowsPerPage
+                    )
+                );
+
+
+            if (
+                currentPricePage >
+                totalPages
+            ) {
+
+                currentPricePage =
+                    totalPages;
+
+            }
+
+
+            if (
+                currentPricePage < 1
+            ) {
+
+                currentPricePage = 1;
+
+            }
+
+
+            const startIndex =
+                (
+                    currentPricePage - 1
+                ) *
+                priceRowsPerPage;
+
+
+            const endIndex =
+                Math.min(
+                    startIndex +
+                    priceRowsPerPage,
+                    totalRows
+                );
+
+
+            const pageRows =
+                visiblePriceRows.slice(
+                    startIndex,
+                    endIndex
+                );
+
+
             table.innerHTML =
                 "";
 
 
             if (
-                rows.length === 0
+                totalRows === 0
             ) {
 
                 table.innerHTML =
                     `<tr>
                         <td colspan="7"
                             style="text-align:center;padding:24px;">
-                            Todavía no hay reportes registrados.
+                            No hay precios que coincidan con la búsqueda.
                         </td>
                     </tr>`;
+
+
+                updatePaginationControls(
+                    0,
+                    0,
+                    0,
+                    1
+                );
 
                 return;
 
             }
 
 
-            rows.forEach(
+            pageRows.forEach(
                 function(row) {
 
                     const tr =
@@ -4889,6 +5355,108 @@ input[type="number"].price-input {
                 }
             );
 
+
+            updatePaginationControls(
+                totalRows,
+                startIndex,
+                endIndex,
+                totalPages
+            );
+
+        }
+
+
+        function changePricePage(direction) {
+
+            const totalPages =
+                Math.max(
+                    1,
+                    Math.ceil(
+                        visiblePriceRows.length /
+                        priceRowsPerPage
+                    )
+                );
+
+
+            const nextPage =
+                currentPricePage +
+                direction;
+
+
+            if (
+                nextPage < 1 ||
+                nextPage > totalPages
+            ) {
+
+                return;
+
+            }
+
+
+            currentPricePage =
+                nextPage;
+
+
+            renderPriceRows(
+                visiblePriceRows
+            );
+
+
+            const section =
+                document.getElementById(
+                    "priceTable"
+                );
+
+
+            if (section) {
+
+                section
+                    .closest(
+                        ".section"
+                    )
+                    ?.scrollIntoView({
+                        behavior:
+                            "smooth",
+                        block:
+                            "start"
+                    });
+
+            }
+
+        }
+
+
+        function changeRowsPerPage() {
+
+            const select =
+                document.getElementById(
+                    "rowsPerPage"
+                );
+
+
+            const value =
+                Number(
+                    select?.value
+                );
+
+
+            priceRowsPerPage =
+                [10, 20, 50, 100]
+                    .includes(value)
+                    ? value
+                    : 10;
+
+
+            currentPricePage =
+                1;
+
+
+            renderPriceRows(
+                visiblePriceRows.length
+                    ? visiblePriceRows
+                    : allPriceRows
+            );
+
         }
 
 
@@ -4975,6 +5543,10 @@ input[type="number"].price-input {
                 );
 
             }
+
+
+            currentPricePage =
+                1;
 
 
             renderPriceRows(
@@ -5714,6 +6286,12 @@ input[type="number"].price-input {
 
         window.filterPrices =
             filterPrices;
+
+        window.changePricePage =
+            changePricePage;
+
+        window.changeRowsPerPage =
+            changeRowsPerPage;
 
         window.searchMainLocation =
             searchMainLocation;

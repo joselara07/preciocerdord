@@ -111,7 +111,23 @@
             margin-bottom: 18px;
         }
 
-        .country {
+        .country-flag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+    }
+
+    .country-flag svg {
+        display: block;
+        border-radius: 2px;
+        box-shadow: 0 0 0 1px rgba(20, 83, 45, 0.12);
+    }
+
+    .country {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -958,7 +974,27 @@ input[type="number"].price-input {
 <section class="hero">
 
     <div class="country">
-        🇩🇴 República Dominicana
+        <span class="country-flag" aria-hidden="true">
+            <svg
+                viewBox="0 0 32 20"
+                width="26"
+                height="17"
+                role="img"
+                aria-label="Bandera de República Dominicana">
+
+                <rect width="32" height="20" fill="#ffffff"></rect>
+
+                <rect x="0" y="0" width="14" height="8" fill="#002d62"></rect>
+                <rect x="18" y="0" width="14" height="8" fill="#ce1126"></rect>
+
+                <rect x="0" y="12" width="14" height="8" fill="#ce1126"></rect>
+                <rect x="18" y="12" width="14" height="8" fill="#002d62"></rect>
+
+                <circle cx="16" cy="10" r="1.7" fill="#006847"></circle>
+            </svg>
+        </span>
+
+        República Dominicana
     </div>
 
 
@@ -1318,7 +1354,11 @@ input[type="number"].price-input {
                 id="rowsPerPage"
                 onchange="changeRowsPerPage()">
 
-                <option value="10" selected>
+                <option value="5" selected>
+                    5
+                </option>
+
+                <option value="10">
                     10
                 </option>
 
@@ -4746,11 +4786,37 @@ input[type="number"].price-input {
 
         let currentPricePage = 1;
 
-        let priceRowsPerPage = 10;
+        let priceRowsPerPage = 5;
 
 
         let unsubscribePriceListener =
             null;
+
+
+        function getReportActivityMillis(report) {
+
+            const updated =
+                report.actualizadoEn &&
+                typeof report.actualizadoEn.toMillis ===
+                    "function"
+                    ? report.actualizadoEn.toMillis()
+                    : 0;
+
+
+            const created =
+                report.creadoEn &&
+                typeof report.creadoEn.toMillis ===
+                    "function"
+                    ? report.creadoEn.toMillis()
+                    : 0;
+
+
+            return Math.max(
+                updated,
+                created
+            );
+
+        }
 
 
         function processPriceSnapshot(
@@ -4867,7 +4933,14 @@ input[type="number"].price-input {
                                 reference.confidence,
 
                             confidenceText:
-                                reference.confidenceText
+                                reference.confidenceText,
+
+                            latestMillis:
+                                Math.max(
+                                    ...reports.map(
+                                        getReportActivityMillis
+                                    )
+                                )
 
                         };
 
@@ -4878,9 +4951,9 @@ input[type="number"].price-input {
                     function(a, b) {
 
                         return (
-                            b.fecha || ""
-                        ).localeCompare(
-                            a.fecha || ""
+                            b.latestMillis || 0
+                        ) - (
+                            a.latestMillis || 0
                         );
 
                     }
@@ -4890,6 +4963,11 @@ input[type="number"].price-input {
             /*
             Conservar búsqueda y orden actuales.
             filterPrices() también renderiza la tabla.
+            */
+            /*
+            Cuando llega un reporte nuevo o una actualización,
+            volvemos a la primera página para que lo más reciente
+            aparezca inmediatamente arriba.
             */
             currentPricePage =
                 1;
@@ -5441,10 +5519,10 @@ input[type="number"].price-input {
 
 
             priceRowsPerPage =
-                [10, 20, 50, 100]
+                [5, 10, 20, 50, 100]
                     .includes(value)
                     ? value
-                    : 10;
+                    : 5;
 
 
             currentPricePage =
@@ -5534,9 +5612,9 @@ input[type="number"].price-input {
                     function(a, b) {
 
                         return (
-                            b.fecha || ""
-                        ).localeCompare(
-                            a.fecha || ""
+                            b.latestMillis || 0
+                        ) - (
+                            a.latestMillis || 0
                         );
 
                     }

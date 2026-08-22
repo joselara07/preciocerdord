@@ -1095,7 +1095,7 @@ input[type="number"].price-input {
         </div>
 
         <div class="stat-label">
-            Reportes recibidos
+            Reportes últimos 7 días
         </div>
 
     </div>
@@ -1112,7 +1112,7 @@ input[type="number"].price-input {
         </div>
 
         <div class="stat-label">
-            Zonas registradas
+            Zonas con datos recientes
         </div>
 
     </div>
@@ -1483,6 +1483,8 @@ input[type="number"].price-input {
             collection,
             addDoc,
             getDocs,
+            query,
+            where,
             doc,
             updateDoc,
             serverTimestamp
@@ -1701,6 +1703,100 @@ input[type="number"].price-input {
         }
 
 
+        /*
+        =========================================================
+        PRECIO DE REFERENCIA — VERSIÓN AUDITADA
+        =========================================================
+
+        Ventana principal:
+        últimos 7 días.
+
+        El precio se calcula con mediana, no promedio.
+
+        Cuando existen suficientes reportes, eliminamos valores
+        claramente atípicos usando IQR (rango intercuartílico).
+
+        Confianza:
+        - Alta: 5+ reportes independientes y dispersión <= 10 %
+        - Moderada: 3+ reportes
+        - Pocos datos: 1-2 reportes
+
+        "Independientes" significa reporterId distinto cuando
+        existe. Esto no es autenticación, pero evita contar dos
+        veces el mismo identificador dentro del cálculo.
+        =========================================================
+        */
+
+        const REFERENCE_DAYS = 7;
+
+
+        function getRecentCutoffDate() {
+
+            const date =
+                new Date();
+
+
+            date.setHours(
+                0, 0, 0, 0
+            );
+
+
+            date.setDate(
+                date.getDate() -
+                (
+                    REFERENCE_DAYS - 1
+                )
+            );
+
+
+            return date;
+
+        }
+
+
+        function getDateDaysAgo(days) {
+
+            const date =
+                new Date();
+
+
+            date.setHours(
+                0, 0, 0, 0
+            );
+
+
+            date.setDate(
+                date.getDate() - days
+            );
+
+
+            const year =
+                date.getFullYear();
+
+
+            const month =
+                String(
+                    date.getMonth() + 1
+                ).padStart(
+                    2,
+                    "0"
+                );
+
+
+            const day =
+                String(
+                    date.getDate()
+                ).padStart(
+                    2,
+                    "0"
+                );
+
+
+            return `${year}-${month}-${day}`;
+
+        }
+
+
         function calculateMedian(prices) {
 
             const sorted =
@@ -1713,6 +1809,11 @@ input[type="number"].price-input {
                 );
 
 
+            if (!sorted.length) {
+                return null;
+            }
+
+
             const middle =
                 Math.floor(
                     sorted.length / 2
@@ -1723,12 +1824,10 @@ input[type="number"].price-input {
                 sorted.length % 2 === 0
             ) {
 
-                return Math.round(
-                    (
-                        sorted[middle - 1] +
-                        sorted[middle]
-                    ) / 2
-                );
+                return (
+                    sorted[middle - 1] +
+                    sorted[middle]
+                ) / 2;
 
             }
 
@@ -1738,19 +1837,293 @@ input[type="number"].price-input {
         }
 
 
+        function calculateQuartile(
+            sortedPrices,
+            percentile
+        ) {
+
+            if (!sortedPrices.length) {
+                return null;
+            }
+
+
+            const index =
+                (
+                    sortedPrices.length - 1
+                ) * percentile;
+
+
+            const lower =
+                Math.floor(index);
+
+
+            const upper =
+                Math.ceil(index);
+
+
+            if (lower === upper) {
+                return sortedPrices[lower];
+            }
+
+
+            const weight =
+                index - lower;
+
+
+            return (
+                sortedPrices[lower] *
+                (1 - weight)
+            ) +
+            (
+                sortedPrices[upper] *
+                weight
+            );
+
+        }
+
+
+        function removePriceOutliers(
+            reports
+        ) {
+
+            /*
+            Con menos de 4 reportes no eliminamos nada.
+            Con tan pocos datos sería demasiado agresivo.
+            */
+            if (reports.length < 4) {
+                return reports;
+            }
+
+
+            const prices =
+                reports
+                    .map(
+                        function(report) {
+                            return Number(
+                                report.precio
+                            );
+                        }
+                    )
+                    .filter(
+                        Number.isFinite
+                    )
+                    .sort(
+                        function(a, b) {
+                            return a - b;
+                        }
+                    );
+
+
+            const q1 =
+                calculateQuartile(
+                    prices,
+                    0.25
+                );
+
+
+            const q3 =
+                calculateQuartile(
+                    prices,
+                    0.75
+                );
+
+
+            const iqr =
+                q3 - q1;
+
+
+            /*
+            Si todos los precios son prácticamente iguales,
+            no hay nada que filtrar.
+            */
+            if (
+                !Number.isFinite(iqr) ||
+                iqr <= 0
+            ) {
+                return reports;
+            }
+
+
+            const minimum =
+                q1 - (1.5 * iqr);
+
+
+            const maximum =
+                q3 + (1.5 * iqr);
+
+
+            const filtered =
+                reports.filter(
+                    function(report) {
+
+                        const price =
+                            Number(
+                                report.precio
+                            );
+
+
+                        return (
+                            price >= minimum &&
+                            price <= maximum
+                        );
+
+                    }
+                );
+
+
+            /*
+            Nunca dejamos una zona sin datos por el filtro.
+            */
+            return filtered.length
+                ? filtered
+                : reports;
+
+        }
+
+
+        function deduplicateReferenceReports(
+            reports
+        ) {
+
+            const byReporter =
+                new Map();
+
+
+            const withoutReporter =
+                [];
+
+
+            reports.forEach(
+                function(report) {
+
+                    const reporterId =
+                        String(
+                            report.reporterId ||
+                            ""
+                        ).trim();
+
+
+                    if (!reporterId) {
+
+                        /*
+                        Reportes antiguos sin reporterId:
+                        se conservan para no perder información.
+                        */
+                        withoutReporter.push(
+                            report
+                        );
+
+                        return;
+
+                    }
+
+
+                    const existing =
+                        byReporter.get(
+                            reporterId
+                        );
+
+
+                    /*
+                    Si por alguna razón el mismo reporterId tiene
+                    más de un reporte en esta selección, usamos el
+                    más reciente.
+                    */
+                    if (
+                        !existing ||
+                        (
+                            report.fecha || ""
+                        ) > (
+                            existing.fecha || ""
+                        )
+                    ) {
+
+                        byReporter.set(
+                            reporterId,
+                            report
+                        );
+
+                    }
+
+                }
+            );
+
+
+            return [
+                ...byReporter.values(),
+                ...withoutReporter
+            ];
+
+        }
+
+
         function getReferenceFromReports(
             reports
         ) {
 
-            const validReports =
+            const cutoffDate =
+                getDateDaysAgo(
+                    REFERENCE_DAYS - 1
+                );
+
+
+            const cutoffTimestamp =
+                getRecentCutoffDate();
+
+
+            const recentValidReports =
                 reports.filter(
                     function(report) {
 
+                        const price =
+                            Number(
+                                report.precio
+                            );
+
+
+                        let isRecent =
+                            false;
+
+
+                        /*
+                        Para reportes nuevos usamos creadoEn,
+                        generado por serverTimestamp().
+                        Esa es nuestra referencia temporal confiable.
+                        */
+                        if (
+                            report.creadoEn &&
+                            typeof report.creadoEn.toDate ===
+                                "function"
+                        ) {
+
+                            isRecent =
+                                report.creadoEn.toDate() >=
+                                cutoffTimestamp;
+
+                        } else {
+
+                            /*
+                            Compatibilidad temporal con reportes antiguos
+                            que todavía no tengan creadoEn.
+                            */
+                            isRecent =
+                                (
+                                    typeof report.fecha ===
+                                        "string"
+                                    &&
+                                    report.fecha >=
+                                        cutoffDate
+                                );
+
+                        }
+
+
                         return (
-                            typeof report.precio ===
-                                "number"
+                            Number.isFinite(price)
                             &&
-                            report.precio > 0
+                            price > 0
+                            &&
+                            isRecent
                         );
 
                     }
@@ -1758,7 +2131,7 @@ input[type="number"].price-input {
 
 
             if (
-                validReports.length === 0
+                recentValidReports.length === 0
             ) {
 
                 return null;
@@ -1766,39 +2139,146 @@ input[type="number"].price-input {
             }
 
 
+            const independentReports =
+                deduplicateReferenceReports(
+                    recentValidReports
+                );
+
+
+            const acceptedReports =
+                removePriceOutliers(
+                    independentReports
+                );
+
+
             const prices =
-                validReports.map(
+                acceptedReports.map(
                     function(report) {
 
-                        return report.precio;
+                        return Number(
+                            report.precio
+                        );
 
                     }
                 );
 
 
+            const median =
+                calculateMedian(
+                    prices
+                );
+
+
+            const referencePrice =
+                Math.round(
+                    median
+                );
+
+
+            const minimumPrice =
+                Math.min(
+                    ...prices
+                );
+
+
+            const maximumPrice =
+                Math.max(
+                    ...prices
+                );
+
+
+            const spreadPercentage =
+                referencePrice > 0
+                    ? (
+                        (
+                            maximumPrice -
+                            minimumPrice
+                        ) /
+                        referencePrice
+                    ) * 100
+                    : 0;
+
+
             const dates =
-                validReports
-                .map(
-                    function(report) {
+                acceptedReports
+                    .map(
+                        function(report) {
 
-                        return report.fecha || "";
+                            return (
+                                report.fecha ||
+                                ""
+                            );
 
-                    }
-                )
-                .sort()
-                .reverse();
+                        }
+                    )
+                    .sort()
+                    .reverse();
+
+
+            let confidence =
+                "low";
+
+
+            let confidenceText =
+                "Pocos datos";
+
+
+            if (
+                acceptedReports.length >= 5 &&
+                spreadPercentage <= 10
+            ) {
+
+                confidence =
+                    "high";
+
+                confidenceText =
+                    "Alta confianza";
+
+            } else if (
+                acceptedReports.length >= 3
+            ) {
+
+                confidence =
+                    "medium";
+
+                confidenceText =
+                    "Confianza moderada";
+
+            }
 
 
             return {
 
                 price:
-                    calculateMedian(prices),
+                    referencePrice,
 
                 count:
-                    validReports.length,
+                    acceptedReports.length,
+
+                rawCount:
+                    recentValidReports.length,
+
+                excluded:
+                    Math.max(
+                        0,
+                        independentReports.length -
+                        acceptedReports.length
+                    ),
 
                 latestDate:
-                    dates[0] || ""
+                    dates[0] || "",
+
+                confidence:
+                    confidence,
+
+                confidenceText:
+                    confidenceText,
+
+                spreadPercentage:
+                    spreadPercentage,
+
+                days:
+                    REFERENCE_DAYS
 
             };
 
@@ -1813,6 +2293,34 @@ input[type="number"].price-input {
                 .replaceAll(">", "&gt;")
                 .replaceAll('"', "&quot;")
                 .replaceAll("'", "&#039;");
+
+        }
+
+
+
+        async function getRecentReportsSnapshot() {
+
+            const cutoffTimestamp =
+                getRecentCutoffDate();
+
+
+            const recentQuery =
+                query(
+                    collection(
+                        db,
+                        "reports"
+                    ),
+                    where(
+                        "creadoEn",
+                        ">=",
+                        cutoffTimestamp
+                    )
+                );
+
+
+            return await getDocs(
+                recentQuery
+            );
 
         }
 
@@ -2216,12 +2724,7 @@ input[type="number"].price-input {
             try {
 
                 const snapshot =
-                    await getDocs(
-                        collection(
-                            db,
-                            "reports"
-                        )
-                    );
+                    await getRecentReportsSnapshot();
 
 
                 const reports = [];
@@ -2296,11 +2799,11 @@ input[type="number"].price-input {
 
 
                     mainMeta.textContent =
-                        "Todavía no hay reportes para esta zona.";
+                        "No hay reportes recientes para esta zona.";
 
 
                     message.textContent =
-                        "ℹ️ Esta zona todavía no tiene un precio de referencia.";
+                        "ℹ️ No hay suficientes datos de los últimos 7 días para mostrar una referencia actual.";
 
                     return;
 
@@ -2316,19 +2819,23 @@ input[type="number"].price-input {
                     reference.count +
                     (
                         reference.count === 1
-                            ? " reporte"
-                            : " reportes"
+                            ? " reporte reciente · "
+                            : " reportes recientes · "
                     ) +
-                    " registrado" +
-                    (
-                        reference.count === 1
-                            ? ""
-                            : "s"
-                    );
+                    reference.confidenceText;
 
 
                 message.textContent =
-                    "✅ Precio de referencia para " +
+                    (
+                        reference.confidence ===
+                        "high"
+                            ? "🟢 "
+                            : reference.confidence ===
+                              "medium"
+                                ? "🟡 "
+                                : "🟠 "
+                    ) +
+                    "Precio de referencia para " +
                     (
                         district
                             ? `${district}, ${municipality}`
@@ -2336,7 +2843,9 @@ input[type="number"].price-input {
                     ) +
                     ", " +
                     province +
-                    ".";
+                    ". Basado en los últimos " +
+                    reference.days +
+                    " días.";
 
             } catch (error) {
 
@@ -3376,26 +3885,6 @@ input[type="number"].price-input {
             reports
         ) {
 
-            const prices =
-                reports
-                    .map(
-                        report =>
-                            Number(
-                                report.precio
-                            )
-                    )
-                    .filter(
-                        price =>
-                            Number.isFinite(
-                                price
-                            ) &&
-                            price > 0
-                    );
-
-            if (!prices.length) {
-                return null;
-            }
-
             return getReferenceFromReports(
                 reports
             );
@@ -3525,13 +4014,13 @@ input[type="number"].price-input {
             */
 
             if (
-                price < 80 ||
-                price > 500
+                price < 50 ||
+                price > 1000
             ) {
 
                 const confirmed =
                     confirm(
-                        "⚠️ El precio que introdujiste está fuera del rango habitual de la plataforma.\n\n" +
+                        "⚠️ El precio que introdujiste está fuera del rango técnico habitual de la plataforma.\n\n" +
                         "Precio: RD$" +
                         price +
                         "/kg\n\n" +
@@ -3555,12 +4044,7 @@ input[type="number"].price-input {
                 */
 
                 const snapshot =
-                    await getDocs(
-                        collection(
-                            db,
-                            "reports"
-                        )
-                    );
+                    await getRecentReportsSnapshot();
 
 
                 const reports =
@@ -3976,12 +4460,7 @@ input[type="number"].price-input {
             try {
 
                 const snapshot =
-                    await getDocs(
-                        collection(
-                            db,
-                            "reports"
-                        )
-                    );
+                    await getRecentReportsSnapshot();
 
 
                 const grouped =
@@ -4078,7 +4557,13 @@ input[type="number"].price-input {
                                     reference.count,
 
                                 fecha:
-                                    reference.latestDate
+                                    reference.latestDate,
+
+                                confidence:
+                                    reference.confidence,
+
+                                confidenceText:
+                                    reference.confidenceText
 
                             };
 
@@ -4209,15 +4694,18 @@ input[type="number"].price-input {
 
 
                     const statusClass =
-                        row.reports >= 3
+                        row.confidence === "high"
                             ? "status"
                             : "status warning";
 
 
                     const statusText =
-                        row.reports >= 3
-                            ? "Confirmado"
-                            : "Pocos reportes";
+                        row.confidenceText ||
+                        (
+                            row.reports >= 3
+                                ? "Confianza moderada"
+                                : "Pocos datos"
+                        );
 
 
                     tr.innerHTML =

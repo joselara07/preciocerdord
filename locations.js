@@ -27,13 +27,13 @@ const locations = {};
 const TERRITORY_SOURCES = {
 
     provinces:
-        "https://raw.githubusercontent.com/DannyFeliz/Datos-Rep-Dom/master/JSON/provincias.json",
+        "./data/provincias.json",
 
     municipalities:
-        "https://raw.githubusercontent.com/DannyFeliz/Datos-Rep-Dom/master/JSON/municipios.json",
+        "./data/municipios.json",
 
     districts:
-        "https://raw.githubusercontent.com/DannyFeliz/Datos-Rep-Dom/master/JSON/distritos.json"
+        "./data/distritos.json"
 
 };
 
@@ -196,7 +196,7 @@ async function loadLocations() {
         // index 2 → ID 3
         //
         // Esto permite relacionarlo con
-        // distrito.municipioId.
+        // district.municipioId.
         // =================================================
 
         municipalities.forEach(

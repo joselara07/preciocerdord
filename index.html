@@ -1479,6 +1479,12 @@ input[type="number"].price-input {
         } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 
         import {
+            getAuth,
+            signInAnonymously,
+            onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+
+        import {
             getFirestore,
             collection,
             addDoc,
@@ -1526,9 +1532,91 @@ input[type="number"].price-input {
             getFirestore(app);
 
 
+        const auth =
+            getAuth(app);
+
+
         console.log(
             "🔥 Firebase conectado correctamente"
         );
+
+
+        // =================================================
+        // AUTENTICACIÓN ANÓNIMA
+        // =================================================
+
+        function waitForInitialAuthState() {
+
+            return new Promise(
+                function(resolve, reject) {
+
+                    const unsubscribe =
+                        onAuthStateChanged(
+                            auth,
+
+                            function(user) {
+
+                                unsubscribe();
+
+                                resolve(user);
+
+                            },
+
+                            function(error) {
+
+                                unsubscribe();
+
+                                reject(error);
+
+                            }
+                        );
+
+                }
+            );
+
+        }
+
+
+        async function ensureAnonymousAuth() {
+
+            let user =
+                auth.currentUser;
+
+
+            if (!user) {
+
+                user =
+                    await waitForInitialAuthState();
+
+            }
+
+
+            if (!user) {
+
+                const credential =
+                    await signInAnonymously(
+                        auth
+                    );
+
+
+                user =
+                    credential.user;
+
+            }
+
+
+            if (!user) {
+
+                throw new Error(
+                    "No se pudo crear la identidad anónima del dispositivo."
+                );
+
+            }
+
+
+            return user;
+
+        }
 
 
         // =================================================
@@ -3796,25 +3884,18 @@ input[type="number"].price-input {
 
         function getReporterId() {
 
-            const key =
-                "precioCerdoRD_reporterId";
+            /*
+            El identificador ya no lo inventa localStorage.
 
-            let id =
-                localStorage.getItem(key);
+            Ahora es el UID anónimo emitido por Firebase
+            Authentication. Para el porcicultor sigue siendo
+            invisible: no hay cuenta, correo ni contraseña.
+            */
 
-            if (!id) {
+            return auth.currentUser
+                ? auth.currentUser.uid
+                : "";
 
-                id =
-                    "r_" +
-                    crypto.randomUUID();
-
-                localStorage.setItem(
-                    key,
-                    id
-                );
-            }
-
-            return id;
         }
 
 
@@ -4067,8 +4148,12 @@ input[type="number"].price-input {
                 );
 
 
+                const authenticatedUser =
+                    await ensureAnonymousAuth();
+
+
                 const reporterId =
-                    getReporterId();
+                    authenticatedUser.uid;
 
 
                 /*
@@ -5633,6 +5718,13 @@ input[type="number"].price-input {
         // =================================================
 
         try {
+
+            await ensureAnonymousAuth();
+
+            console.log(
+                "🔐 Identidad anónima lista."
+            );
+
 
             await waitForLocations();
 
